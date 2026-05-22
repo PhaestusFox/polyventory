@@ -45,14 +45,15 @@ impl InventoryCommands<'_, '_, '_> {
             return Err(AddFailed::ItemDescriptorNotFound(handle.descriptor.clone()));
         };
         match self.current_inventory.add_item(descriptor, item) {
-            Some((slot, shape)) => {
+            Some((slot, shape, slot_type)) => {
                 info!(
-                    "Added {} to inventory in slot {}@{}",
+                    "Added {} to inventory in slot {}@{} with slot type {:?}",
                     descriptor.name(),
                     slot,
-                    shape.position
+                    shape.position,
+                    slot_type
                 );
-                self.commands.entity(item).insert((shape,));
+                self.commands.entity(item).insert((shape, slot_type));
                 Ok(slot)
             }
             None => {
@@ -107,19 +108,21 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
         };
+        // todo - clean up if failed to add to inventory
         let entity = self
             .commands
             .spawn((Item::new(item), descriptor.spawn()))
             .id();
         match self.current_inventory.add_item(descriptor, entity) {
-            Some((slot, shape)) => {
+            Some((slot, shape, slot_type)) => {
                 info!(
-                    "Added {} to inventory in slot {}@{}",
+                    "Added {} to inventory in slot {}@{} with slot type {:?}",
                     descriptor.name(),
                     slot,
-                    shape.position
+                    shape.position,
+                    slot_type
                 );
-                self.commands.entity(entity).insert((shape,));
+                self.commands.entity(entity).insert((shape, slot_type));
                 Ok(entity)
             }
             None => {
@@ -141,16 +144,15 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
         };
-        let (slot, shape) = self
+        let (slot, shape, slot_type) = self
             .current_inventory
-            .reserve_item_at(descriptor, position, orientation)
-            .map_err(|_| AddFailed::NotYetFullImplemented)?;
+            .reserve_item_at(descriptor, position, orientation)?;
         let entity = self
             .commands
-            .spawn((Item::new(item), descriptor.spawn()))
+            .spawn((Item::new(item), descriptor.spawn(), slot_type, shape.clone()))
             .id();
         self.current_inventory
-            .add_unchecked(slot, shape.clone(), entity)
+            .add_unchecked(slot, shape, entity)
             .map_err(|_| AddFailed::SlotNotInInventory {
                 slot_index: slot,
                 num_slots: self.current_inventory.slots().len(),
@@ -197,6 +199,14 @@ pub enum AddFailed {
     NotYetFullImplemented,
     #[error("This inventory does not have enough slots to fit: {} < {}", num_slots, slot_index + 1)]
     SlotNotInInventory { slot_index: usize, num_slots: usize },
+    #[error("No slots in inventory")]
+    NoSlotsInInventory,
+    #[error("Item bounds {item_bounds:?} do not fit within slot {slot_index} bounds {slot_bounds:?}")]
+    NotInBounds { slot_index: usize, item_bounds: Aabb2d, slot_bounds: Aabb2d },
+    #[error("Item Overlaps with existing item in slot {slot_index} at entry {overlap_index}")]
+    OverlapWithExistingItem { slot_index: usize, overlap_index: usize},
+    #[error("No slots in inventory accept this item")]
+    NoSlotsAcceptThisItem,
 }
 
 #[derive(Debug, thiserror::Error)]

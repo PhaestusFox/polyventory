@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::Anchor};
 
 use crate::{inventory, prelude::*, rendering::render::InventorySlot};
 
@@ -6,14 +6,16 @@ pub struct InventoryNodePlugin;
 
 impl Plugin for InventoryNodePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreUpdate, (spawn_inventory_window, update_image_cell_scale));
+        app.add_systems(PreUpdate, (spawn_inventory_window, update_image_cell_scale, item_node::update_item_node_image));
     }
 }
 
 mod inventory_node;
-mod slot_node;
 pub use inventory_node::InventoryNode;
+mod slot_node;
 pub use slot_node::SlotNode;
+mod item_node;
+pub use item_node::ItemNode;
 
 fn spawn_inventory_window(
     mut commands: Commands,
@@ -41,7 +43,7 @@ fn spawn_inventory_window(
                     position_type: PositionType::Absolute,
                     width: Val::Px(slot.size.x as f32 * style.cell_size.x),
                     height: Val::Px(slot.size.y as f32 * style.cell_size.y),
-                    bottom: Val::Px(slot.position.y as f32 * style.cell_size.y),
+                    top: Val::Px(slot.position.y as f32 * style.cell_size.y),
                     left: Val::Px(slot.position.x as f32 * style.cell_size.x),
                     ..Default::default()
                 },
@@ -52,7 +54,22 @@ fn spawn_inventory_window(
                 },
                 ChildOf(entity),
                 Name::new(format!("Slot {}", i)),
-            ));
+            )).with_children(|root| {
+                for entry in &slot.entries {
+                    let size = entry.shape.size().as_vec2() * style.cell_size;
+                    root.spawn((
+                        ItemNode(entity),
+                        DisplayedItem {
+                            item: entry.entity,
+                        },
+                        Node {
+                            width: Val::Px(size.x),
+                            height: Val::Px(size.y),
+                            ..Default::default()
+                        },
+                    ));
+                }
+            });
         }
     }
 }

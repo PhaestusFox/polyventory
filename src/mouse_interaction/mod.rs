@@ -87,7 +87,7 @@ fn pickup_item(
         return;
     };
 
-    let (slot, entry) = match inventory.remove_item(item.entity) {
+    let (slot, entry) = match inventory.remove_item(item.item) {
         Ok(entry) => entry,
         Err(e) => {
             warn!("Failed to remove item from inventory: {:?}", e);
@@ -138,7 +138,7 @@ fn drop_item(
         return;
     };
 
-    match inventory.add_item_at(icon.entity, click.position, shape.orientation) {
+    match inventory.add_item_at(icon.item, click.position, shape.orientation) {
         Err(e) => {
             warn!("Failed to add item to inventory: {:?}", e);
             return;

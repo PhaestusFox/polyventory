@@ -134,7 +134,14 @@ fn spawn_inventory(
     }
 
     // let inventory = inventorys.add(test_inventory);
-    commands.spawn(InventoryRender::new(test_inventory_handle.clone()));
+    commands.spawn((
+        InventoryNode::new(test_inventory_handle.clone()),
+        Node {
+            margin: UiRect::all(Val::Auto),
+            left: Val::Px(100.0),
+            ..Default::default()
+        }
+    ));
 
     commands.insert_resource(MainInventory(test_inventory_handle));
 }

@@ -87,7 +87,7 @@ pub(super) fn spawn_inventory_window(
                             ..Default::default()
                         },
                         Anchor::BOTTOM_LEFT,
-                        DisplayedItem { entity: item.entity},
+                        DisplayedItem { item: item.entity},
                         item.shape.clone(),
                         Pickable::default(),
                     ));
@@ -100,7 +100,7 @@ pub(super) fn spawn_inventory_window(
 #[relationship(relationship_target = DisplayingItem)]
 pub struct DisplayedItem {
     #[relationship]
-    pub entity: Entity,
+    pub item: Entity,
 }
 
 #[derive(Component, Default)]

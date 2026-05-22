@@ -67,6 +67,14 @@ impl ItemDescriptor {
         }
         None
     }
+    pub fn get_image(&self, slot: &SlotType) -> Option<(Handle<Image>, UVec2)> {
+        for (slot_type, image) in &self.image {
+            if slot_type == slot {
+                return Some(image.clone());
+            }
+        }
+        None
+    }
 
     pub fn image(&self, slot: impl Iterator<Item = SlotType>) -> Option<(Handle<Image>, UVec2)> {
         for slot_type in slot {

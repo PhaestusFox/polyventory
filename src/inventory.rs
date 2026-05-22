@@ -8,6 +8,8 @@ mod traits;
 pub use item::*;
 pub use slot::*;
 
+use crate::inventory::manager::AddFailed;
+
 #[derive(Asset, TypePath)]
 pub struct Inventory {
     slots: Vec<Slot>,
@@ -43,7 +45,7 @@ impl Inventory {
         &mut self,
         item_type: &ItemDescriptor,
         entity: Entity,
-    ) -> Option<(usize, Shape)> {
+    ) -> Option<(usize, Shape, SlotType)> {
         for (i, slot) in self.slots.iter_mut().enumerate() {
             for slot_type in &slot.slot_type {
                 // if item cant go in this slot type try the next one
@@ -57,8 +59,9 @@ impl Inventory {
                         entity,
                         shape: shape.clone(),
                     };
+                    let slot_type = slot_type.clone();
                     slot.add_entry(entry);
-                    return Some((i, shape));
+                    return Some((i, shape, slot_type));
                 }
             }
         }
@@ -106,7 +109,10 @@ impl Inventory {
                         break;
                     }
                     Err(FitFailure::OverlapsWith(index, cell)) => {
-                        errors.push(AddFailed::OverlapsWith(i, index));
+                        errors.push(AddFailed::OverlapWithExistingItem {
+                            slot_index: i,
+                            overlap_index: index,
+                        });
                         break;
                     }
                 }
@@ -172,7 +178,7 @@ impl Inventory {
         item_type: &ItemDescriptor,
         position: IVec2,
         orientation: Orientation,
-    ) -> Result<(usize, Shape), AddFailed> {
+    ) -> Result<(usize, Shape, SlotType), AddFailed> {
         if self.slots.is_empty() {
             return Err(AddFailed::NoSlotsInInventory);
         }
@@ -194,7 +200,7 @@ impl Inventory {
                             position,
                             orientation
                         );
-                        return Ok((i, shape));
+                        return Ok((i, shape, slot_type.clone()));
                     }
                     Err(FitFailure::NotInBounds(item, slot)) => {
                         error = AddFailed::NotInBounds {
@@ -204,8 +210,11 @@ impl Inventory {
                         };
                         break;
                     }
-                    Err(FitFailure::OverlapsWith(index, cell)) => {
-                        error = AddFailed::OverlapsWith(i, index);
+                    Err(FitFailure::OverlapsWith(index, _)) => {
+                        error = AddFailed::OverlapWithExistingItem {
+                            slot_index: i,
+                            overlap_index: index,
+                        };
                         break;
                     }
                 }
@@ -218,24 +227,6 @@ impl Inventory {
     pub fn get_slot(&self, index: usize) -> Option<&Slot> {
         self.slots.get(index)
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum AddFailed {
-    #[error(
-        "Item Bounds {item_bounds:?} does not fit within slot {slot_index} bounds {slot_bounds:?}"
-    )]
-    NotInBounds {
-        slot_index: usize,
-        item_bounds: Aabb2d,
-        slot_bounds: Aabb2d,
-    },
-    #[error("This inventory has literally no slots, add at least one before adding items")]
-    NoSlotsInInventory,
-    #[error("No slots in this inventory can fit this item")]
-    NoSlotsAcceptThisItem,
-    #[error("Item overlaps with item {1} already in the slot: {0}")]
-    OverlapsWith(usize, usize),
 }
 
 #[derive(Component, Deref, Reflect)]

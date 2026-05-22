@@ -7,7 +7,9 @@ fn main() {
     let mut app = App::new();
     let mut filter = bevy::log::DEFAULT_FILTER.to_string();
     filter.push_str("polyventory=trace,");
-    app.add_plugins(DefaultPlugins.set(LogPlugin {
+    app.add_plugins(DefaultPlugins
+        .set(ImagePlugin::default_nearest())
+        .set(LogPlugin {
         filter: filter,
         ..Default::default()
     }));
@@ -109,6 +111,9 @@ fn spawn_inventory(
     let empty_bottle = loot.items[0].clone();
     let r = test_inventory.spawn_item(empty_bottle);
     info!("Spawning empty bottle: {:?}", r);
+    let phone = loot.items[3].clone();
+    let r = test_inventory.spawn_item(phone);
+    info!("Spawning phone: {:?}", r);
     let water_bottle = loot.items[1].clone();
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
@@ -119,17 +124,19 @@ fn spawn_inventory(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle, IVec2::new(1, 8), Orientation::Rot270);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Rot270);
     info!("Spawning water bottle at 1,8 with 270 rotation: {:?}", r);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Rot90);
+    info!("Spawning water bottle at 3,9 with 90 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    for _ in 0..10 {
-        let item = loot.items.choose(&mut rng).expect("At least one item").clone();
-        match test_inventory.spawn_item(item) {
-            Ok(item) => info!("Spawned random item: {:?}", item),
-            Err(f) => error!("Failed to spawn random item: {:?}", f),
-        }
-    }
+    // for _ in 0..10 {
+    //     let item = loot.items.choose(&mut rng).expect("At least one item").clone();
+    //     match test_inventory.spawn_item(item) {
+    //         Ok(item) => info!("Spawned random item: {:?}", item),
+    //         Err(f) => error!("Failed to spawn random item: {:?}", f),
+    //     }
+    // }
 
     // let inventory = inventorys.add(test_inventory);
     let style = InventoryStyle {
@@ -142,7 +149,7 @@ fn spawn_inventory(
     commands.spawn((Node {
         margin: UiRect::all(Val::Auto),
         left: Val::Px(200.0),
-        bottom: Val::Px(50.0),
+        top: Val::Px(50.0),
         ..Default::default()
     }, InventoryNode::new(test_inventory_handle.clone()), Name::new("Test Inventory Node"), InventoryStyleHandle(style)));
 

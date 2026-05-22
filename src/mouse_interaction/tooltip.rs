@@ -193,11 +193,11 @@ struct ItemToolTip {
 
 fn show_item_tooltip(
     event: On<ItemToolTip>,
-    items: Query<&Item>,
+    items: Query<(&Item, &Shape, &SlotType)>,
     descriptors: Res<Assets<ItemDescriptor>>,
     mut tooltip: ToolTip,
 ) {
-    let Ok(item) = items.get(event.item) else {
+    let Ok((item, shape, slot_type)) = items.get(event.item) else {
         warn!(
             "ItemToolTip event for entity {:?} that does not have an Item component",
             event.item
@@ -287,6 +287,12 @@ fn show_item_tooltip(
                 .with_children(|size| {
                     for (slot_type, shape) in descriptor.valid_images() {}
                 });
+                dbg.spawn(
+                    Text::new(format!("Slot Type: {:?}", slot_type)),
+                );
+                dbg.spawn(
+                    Text::new(format!("Shape: {:#?}", shape)),
+                );
             });
     }
 }
@@ -302,7 +308,7 @@ fn detect_item_hover(
         return;
     };
     actions.write(ToolTipAction::item_tooltip(
-        clicked.entity,
+        clicked.item,
         Some(mouse.pointer_location.position),
     ));
 }

@@ -9,7 +9,7 @@ use crate::inventory::slot::shape_iters::OrientationIter;
 
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Component)]
 pub enum SlotType {
     Untyped,
     WaterTight,
@@ -116,6 +116,18 @@ impl Orientation {
             self.rotate_ccw()
         } else {
             self
+        }
+    }
+
+    // 1x4 -> (15, -15)
+    // 1x2 -> (5,  -5)
+    pub fn ui_offset(&self, size: Vec2) -> Vec2 {
+        match self {
+            Orientation::Identity |
+            Orientation::Rot0 => Vec2::ZERO,
+            Orientation::Rot90 => Vec2::new(-size.y * 0.5 + size.x * 0.5, -size.y * 0.5 + size.x * 0.5),
+            Orientation::Rot180 => Vec2::new(0., size.y - 1.),
+            Orientation::Rot270 => Vec2::new(size.y * 0.5 - size.x * 0.5, -size.y * 0.5 + size.x * 0.5),
         }
     }
 }
@@ -244,7 +256,7 @@ impl Shape {
             Orientation::Identity | Orientation::Rot0 => {
                 (IVec2::new(px, py), IVec2::new(px + w, py + h))
             }
-            Orientation::Rot90 => (IVec2::new(px - h + 1, py), IVec2::new(px + 1, py + w)),
+            Orientation::Rot90 => (IVec2::new(px - h + 1, py - w + 1), IVec2::new(px + 1, py + 1)),
             Orientation::Rot180 => (
                 IVec2::new(px - w + 1, py - h + 1),
                 IVec2::new(px + 1, py + 1),
@@ -266,6 +278,16 @@ impl Shape {
             ..Default::default()
         }
     }
+    pub fn ui_transform(&self, cell_size: Vec2) -> UiTransform {
+        let rot = self.orientation.ui_offset(self.size().as_vec2());
+        // 15, -15
+        let offset = (self.position.as_vec2() + rot) * cell_size;
+        UiTransform {
+            translation: Val2::new(Val::Px(offset.x), Val::Px(offset.y)),
+            rotation: self.orientation.into(),
+            ..Default::default()
+        }
+    }
 
     pub fn ocupies(&self, cell: IVec2) -> bool {
         let relative = cell - self.position;
@@ -279,6 +301,10 @@ impl Shape {
         };
 
         self.cells.contains(local)
+    }
+
+    pub fn size(&self) -> UVec2 {
+        self.cells.size()
     }
 }
 
@@ -306,6 +332,11 @@ impl Cells {
         }
         match self {
             Cells::Rect { size } => pos.x < size.x as i32 && pos.y < size.y as i32,
+        }
+    }
+    pub fn size(&self) -> UVec2 {
+        match self {
+            Cells::Rect { size } => *size,
         }
     }
 }
