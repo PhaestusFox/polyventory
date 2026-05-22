@@ -1,0 +1,17 @@
+Inventory is grid based
+[ ] Items don't need to be rectangles
+[ ] Items can be nested in other Items
+Item Inventory can be opened a sub windows 
+Items can require slot type
+ - Liquid must go in `water tight` slot
+[ ] Items can be locked in slots
+ - Can lock a compass in knife handle
+ - Can lock unusable marker to make not rectangle Inventory
+[X] Inventory are a type of Asset
+[?] InventoryView hold a handle to the Inventory they are rendering
+ - Some Items should render there Inventory in the parent Inventory
+ -- Water bottle clipped to the side of a backpack
+ -- Small pack clipped to a larger pack
+[?] Items can have and Inventory handle to point to there Inventory
+[ ] Items can be rotated
+[ ] Items can have multiple shapes based on what type of slot they are going in

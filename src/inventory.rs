@@ -1,0 +1,284 @@
+use bevy::{ecs::system::SystemParam, math::bounding::Aabb2d, prelude::*};
+
+mod item;
+pub mod manager;
+mod slot;
+mod traits;
+
+pub use item::*;
+pub use slot::*;
+
+#[derive(Asset, TypePath)]
+pub struct Inventory {
+    slots: Vec<Slot>,
+}
+
+impl Inventory {
+    /// Creates a new inventory with the specified width and height.
+    pub fn new(width: u32, height: u32) -> Self {
+        Self {
+            slots: vec![Slot {
+                slot_type: vec![SlotType::Untyped],
+                position: IVec2::ZERO,
+                size: UVec2::new(width, height),
+                entries: vec![],
+            }],
+        }
+    }
+
+    pub fn new_empty() -> Self {
+        Self { slots: Vec::new() }
+    }
+
+    /// Creates a new inventory with the specified width, height, and slots.
+    pub fn new_with_slots(slots: impl Into<Vec<Slot>>) -> Self {
+        Self {
+            slots: slots.into(),
+        }
+    }
+
+    /// Add an item to the inventory. in the first available space.
+    /// This returns the position the item was placed
+    pub fn add_item(
+        &mut self,
+        item_type: &ItemDescriptor,
+        entity: Entity,
+    ) -> Option<(usize, Shape)> {
+        for (i, slot) in self.slots.iter_mut().enumerate() {
+            for slot_type in &slot.slot_type {
+                // if item cant go in this slot type try the next one
+                let Some(shape) = item_type.size(slot_type) else {
+                    continue;
+                };
+                // todo find fist empty space that can fit the item
+                if let Some(shape) = slot.fit(&shape) {
+                    info!("Added {} to inventory: {:?}", item_type.name(), shape);
+                    let entry = Entry {
+                        entity,
+                        shape: shape.clone(),
+                    };
+                    slot.add_entry(entry);
+                    return Some((i, shape));
+                }
+            }
+        }
+        None
+    }
+
+    pub fn add_item_at(
+        &mut self,
+        item_type: &ItemDescriptor,
+        entity: Entity,
+        position: IVec2,
+        orientation: Orientation,
+    ) -> Result<(usize, Shape), Vec<AddFailed>> {
+        if self.slots.is_empty() {
+            return Err(vec![AddFailed::NoSlotsInInventory]);
+        }
+        let mut errors = Vec::new();
+        for (i, slot) in self.slots.iter_mut().enumerate() {
+            for slot_type in &slot.slot_type {
+                let Some(mut shape) = item_type.size(slot_type) else {
+                    continue;
+                };
+                shape.position = position - slot.position;
+                shape.orientation = orientation;
+                match slot.fit_at(&shape) {
+                    Ok(()) => {
+                        slot.add_entry(Entry {
+                            entity,
+                            shape: shape.clone(),
+                        });
+                        trace!(
+                            "Added {} to inventory at position {:?} with orientation {:?}",
+                            item_type.name(),
+                            position,
+                            orientation
+                        );
+                        return Ok((i, shape));
+                    }
+                    Err(FitFailure::NotInBounds(item, slot)) => {
+                        errors.push(AddFailed::NotInBounds {
+                            slot_index: i,
+                            item_bounds: item,
+                            slot_bounds: slot,
+                        });
+                        break;
+                    }
+                    Err(FitFailure::OverlapsWith(index, cell)) => {
+                        errors.push(AddFailed::OverlapsWith(i, index));
+                        break;
+                    }
+                }
+            }
+        }
+        if errors.is_empty() {
+            errors.push(AddFailed::NoSlotsAcceptThisItem);
+        }
+        Err(errors)
+    }
+
+    /// Add a slot to the inventory.
+    pub fn add_slot(&mut self, slot: Slot) {
+        self.slots.push(slot);
+    }
+
+    pub fn slots(&self) -> &[Slot] {
+        &self.slots
+    }
+
+    pub fn iter_slots_mut(&mut self) -> impl Iterator<Item = &mut Slot> {
+        self.slots.iter_mut()
+    }
+
+    pub fn add_unchecked(
+        &mut self,
+        slot_index: usize,
+        shape: Shape,
+        entity: Entity,
+    ) -> Result<(), AddFailed> {
+        let slot = self
+            .slots
+            .get_mut(slot_index)
+            .ok_or(AddFailed::NoSlotsInInventory)?;
+        slot.add_entry(Entry { entity, shape });
+        Ok(())
+    }
+
+    pub fn reserve_item(
+        &mut self,
+        item_type: &ItemDescriptor,
+    ) -> Result<(usize, Shape), AddFailed> {
+        if self.slots.is_empty() {
+            return Err(AddFailed::NoSlotsInInventory);
+        }
+        for (i, slot) in self.slots.iter_mut().enumerate() {
+            for slot_type in &slot.slot_type {
+                // if item cant go in this slot type try the next one
+                let Some(shape) = item_type.size(slot_type) else {
+                    continue;
+                };
+                // todo find fist empty space that can fit the item
+                if let Some(shape) = slot.fit(&shape) {
+                    return Ok((i, shape));
+                }
+            }
+        }
+        Err(AddFailed::NoSlotsAcceptThisItem)
+    }
+
+    pub fn reserve_item_at(
+        &mut self,
+        item_type: &ItemDescriptor,
+        position: IVec2,
+        orientation: Orientation,
+    ) -> Result<(usize, Shape), AddFailed> {
+        if self.slots.is_empty() {
+            return Err(AddFailed::NoSlotsInInventory);
+        }
+
+        let mut error = AddFailed::NoSlotsInInventory;
+
+        for (i, slot) in self.slots.iter_mut().enumerate() {
+            for slot_type in &slot.slot_type {
+                let Some(mut shape) = item_type.size(slot_type) else {
+                    continue;
+                };
+                shape.position = position - slot.position;
+                shape.orientation = orientation;
+                match slot.fit_at(&shape) {
+                    Ok(()) => {
+                        trace!(
+                            "Reserved space for {} in inventory at position {:?} with orientation {:?}",
+                            item_type.name(),
+                            position,
+                            orientation
+                        );
+                        return Ok((i, shape));
+                    }
+                    Err(FitFailure::NotInBounds(item, slot)) => {
+                        error = AddFailed::NotInBounds {
+                            slot_index: i,
+                            item_bounds: item,
+                            slot_bounds: slot,
+                        };
+                        break;
+                    }
+                    Err(FitFailure::OverlapsWith(index, cell)) => {
+                        error = AddFailed::OverlapsWith(i, index);
+                        break;
+                    }
+                }
+            }
+        }
+        Err(error)
+    }
+
+    #[inline(always)]
+    pub fn get_slot(&self, index: usize) -> Option<&Slot> {
+        self.slots.get(index)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AddFailed {
+    #[error(
+        "Item Bounds {item_bounds:?} does not fit within slot {slot_index} bounds {slot_bounds:?}"
+    )]
+    NotInBounds {
+        slot_index: usize,
+        item_bounds: Aabb2d,
+        slot_bounds: Aabb2d,
+    },
+    #[error("This inventory has literally no slots, add at least one before adding items")]
+    NoSlotsInInventory,
+    #[error("No slots in this inventory can fit this item")]
+    NoSlotsAcceptThisItem,
+    #[error("Item overlaps with item {1} already in the slot: {0}")]
+    OverlapsWith(usize, usize),
+}
+
+#[derive(Component, Deref, Reflect)]
+#[relationship_target(relationship = SlotRender)]
+pub struct InventoryRender {
+    #[deref]
+    inventory: Handle<Inventory>,
+    #[relationship]
+    slots: Vec<Entity>,
+}
+
+impl InventoryRender {
+    pub fn new(data: Handle<Inventory>) -> Self {
+        Self {
+            inventory: data,
+            slots: Vec::new(),
+        }
+    }
+
+    pub fn get_slot(&self, index: usize) -> Option<Entity> {
+        self.slots.get(index).cloned()
+    }
+
+    pub fn handle(&self) -> Handle<Inventory> {
+        self.inventory.clone()
+    }
+}
+
+impl Into<AssetId<Inventory>> for &InventoryRender {
+    fn into(self) -> AssetId<Inventory> {
+        self.inventory.id()
+    }
+}
+
+#[derive(Component, Reflect)]
+#[relationship(relationship_target = InventoryRender)]
+pub struct SlotRender {
+    #[relationship]
+    pub entity: Entity,
+}
+
+impl SlotRender {
+    pub fn new(target: Entity) -> Self {
+        Self { entity: target }
+    }
+}

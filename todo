@@ -1,0 +1,39 @@
+- Mouse Interaction
+[ ] allow click to pickup Item - 1.1
+[ ] allow place Item - 1.2
+[ ] allow rotate and flip Item - 1.3
+
+- ToolTip
+[ ] Refactor
+[ ] Add Meta ToolTip Defining
+[ ] Show current shape/slot type
+[ ] Show image of item
+-- ToolTip Helpers
+    [ ] Add label
+    [ ] Layout Horizontal
+    [ ] Layout Vertical
+    [ ] Add Image
+-- Debug info
+[ ] show size based on slot
+[ ] show image based on slot
+
+- Inventory
+[ ] Shader to render shape
+[ ] Change color of cell base of Type
+[ ] Add mapping of cell type -> Color
+[ ] Add nesting - 2.
+~ look into only keeping Entity in Inventory: make system param for editing inventory easy
+[?] Allow Sub Inventory - 1.9
+    [ ] Allow Positioning Inventory
+[?] Items can be different size and shape depending on slot - 3.
+
+[ ] Add save\load inventory
+- Serde
+[ ] Allow multiple Item per file
+[ ] Allow defining Item meta
+    [ ] Sub-inventory
+    [ ] OnAdd Scripts?
+    [ ] Right Click Menu?
+        [ ] Script to run on menu items
+[ ] Make more robust so it does not break in future
+[ ] add tests to make sure the loading is persisting

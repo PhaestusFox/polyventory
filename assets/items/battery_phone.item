@@ -1,0 +1,10 @@
+[item]
+name: Phone Battery
+size:
+    phone_batt: 1, 1
+    Untyped: 2, 2
+image:
+    phone_batt: bbg\icons\ItmBattCell.png, 1, 1
+    Untyped: bbg\icons\ItmBattCell.png, 2, 2
+description:
+A battery for a cell phone

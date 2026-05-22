@@ -1,0 +1,7 @@
+name: Water Bottle
+size:
+    Untyped: 1, 4
+image:
+    Untyped: bbg\icons\ItmBottleWater.png, 1, 4
+description:
+a bottle full of Water

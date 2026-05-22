@@ -1,0 +1,27 @@
+[package]
+name = "polyventory"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.18", default-features = false }
+thiserror = "2"
+
+
+[dev-dependencies]
+bevy-inspector-egui = "*"
+bevy = { version = "0.18", features = ["default"] }
+rand = "*"
+
+[features]
+default = ["tooltips", "rendering", "ui_node"]
+rendering = []
+ui_node = ["rendering"]
+tooltips = ["bevy/experimental_bevy_feathers"]
+
+[[example]]
+name = "basic_inventory"
+features = ["bevy/file_watcher"]
+
+[profile.release]
+debug = true

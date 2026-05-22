@@ -1,0 +1,5 @@
+name: Phone(on)
+size:
+    Untyped: 1, 2
+image:
+    Untyped: bbg\icons\ItmCellPhoneOn.png, 1, 2
