@@ -8,7 +8,7 @@ use crate::{
     mouse_interaction::tooltip::ToolTipAction,
 };
 
-use bevy::{ecs::system::SystemParam, prelude::*, window::PrimaryWindow};
+use bevy::{ecs::system::SystemParam, input::mouse::AccumulatedMouseMotion, prelude::*, window::PrimaryWindow};
 
 use crate::prelude::*;
 
@@ -38,25 +38,19 @@ pub struct HandMut<'w> {
 
 #[derive(Resource)]
 struct HeldItem {
-    held_offset: Vec2,
     entity: Entity,
-    origin: (Handle<Inventory>, Entry, usize),
-}
-
-impl HeldItem {
-    fn offset(&self) -> Vec2 {
-        self.held_offset
-    }
+    offset: Vec2,
+    origin: (AssetId<Inventory>, Entry, usize),
 }
 
 fn pickup_item(
     click: On<Pointer<Click>>,
     mut commands: Commands,
     hand: Hand,
-    inventorys: Query<&InventoryRender>,
+    inventorys: Query<AnyOf<(&InventoryRender, &InventoryNode)>>,
     mut inventory_manager: InventoryManager,
-    mut items: Query<(Entity, &GlobalTransform, &Shape, &ChildOf, &DisplayedItem)>,
-    mut slots: Query<&SlotRender>,
+    mut items: Query<(Entity, &ChildOf, &DisplayedItem, AnyOf<(&GlobalTransform, &UiGlobalTransform)>)>,
+    mut slots: Query<&InventorySlot>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     if hand.held_item.is_some() {
@@ -68,22 +62,31 @@ fn pickup_item(
         }
         return;
     }
-    let Ok((icon, transform, shape, slot, item)) = items.get_mut(click.entity) else {
+    let Ok((icon, slot, item, pos)) = items.get_mut(click.entity) else {
         return;
     };
     let Ok(slot_render) = slots.get(slot.0) else {
         warn!("Clicked Item is not in an inventory slot");
         return;
     };
-    let Ok(inventory_handle) = inventorys.get(slot_render.entity) else {
-        warn!(
-            "Slot({:?}) is not rendering a valid inventory",
-            slot.parent()
-        );
-        return;
+    let inventory_handle = match inventorys.get(slot_render.inventory) {
+        Ok((_, Some(node))) => {
+            node.0.id()
+        },
+        Ok((Some(inventory_render), _)) => {
+            inventory_render.id()
+        },
+        Ok((None, None)) => {
+            warn!("Clicked Item is not in an inventory");
+            return;
+        }
+        Err(_) => {
+            warn!("Clicked item is not in an inventory");
+            return;
+        }
     };
     let Some(mut inventory) = inventory_manager.open_inventory(inventory_handle) else {
-        warn!("Failed to open inventory {:?}", slot_render.entity);
+        warn!("Failed to open inventory {:?}", slot_render.inventory);
         return;
     };
 
@@ -95,14 +98,24 @@ fn pickup_item(
         }
     };
 
+    let offset = match pos {
+        (_, Some(ui)) => {
+            window.cursor_position().unwrap_or_default() * window.scale_factor() - ui.translation
+        },
+        (Some(global), None) => {
+            global.translation().truncate() - click.pointer_location.position
+        },
+        (None, None) => Vec2::ZERO,
+    };
+
     commands
         .entity(icon)
-        .remove_parent_in_place()
+        .remove::<ChildOf>()
         .remove::<Pickable>();
     commands.insert_resource(HeldItem {
-        held_offset: transform.translation().truncate() - canvas_to_world(&window),
         entity: icon,
-        origin: (inventory_handle.handle(), entry, slot),
+        offset,
+        origin: (inventory_handle, entry, slot),
     });
 }
 
@@ -188,17 +201,29 @@ fn drop_item(
 }
 
 fn update_hand(
-    window: Single<&Window, With<PrimaryWindow>>,
     hand: Hand,
-    mut items: Query<&mut Transform>,
+    mut items: Query<(Option<&mut Transform>, Option<&mut UiTransform>)>,
+    window: Single<&Window, With<PrimaryWindow>>,
 ) {
     let Some(item) = hand.held_item else {
         return;
     };
-    let Ok(mut transform) = items.get_mut(item.entity) else {
+    let Ok((transform, ui_transform)) = items.get_mut(item.entity) else {
         return;
     };
-    transform.translation = (canvas_to_world(&window) + item.offset()).extend(100.);
+    // todo add back sprite offset
+    // if let Some(mut transform) = transform {
+    //     transform.translation += mouse_moved.delta.extend(0.);
+    // }
+    if let (Some(mut ui_transform), Some(mouse)) = (ui_transform, window.cursor_position()) {
+        let offset= item.offset + mouse;
+        if let Val::Px(_) = ui_transform.translation.x {
+            ui_transform.translation.x = Val::Px(offset.x);
+        }
+        if let Val::Px(_) = ui_transform.translation.y {
+            ui_transform.translation.y = Val::Px(offset.y);
+        }
+    }
 }
 
 fn rotate_held_item(scroll: On<Pointer<Scroll>>, hand: Hand, mut icons: Query<&mut Shape>) {

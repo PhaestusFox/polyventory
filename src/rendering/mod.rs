@@ -7,7 +7,7 @@ mod style;
 
 pub(crate) mod render_prelude {
     pub use super::InventoryRenderPlugin;
-    pub use super::render::{DisplayedItem, SpawnInventory};
+    pub use super::render::{DisplayedItem, SpawnInventory, InventorySlot};
     pub use super::style::*;
 }
 
