@@ -16,6 +16,7 @@ impl Plugin for InteractionPlugin {
         #[cfg(feature = "mouse_interaction")]
         app.add_plugins(mouse::MouseInventoryPlugin);
         app.add_observer(interactions::try_pickup);
+        app.add_observer(interactions::try_drop);
         app.add_systems(Startup, spawn_cursor_slot);
     }
 }
@@ -31,6 +32,12 @@ fn spawn_cursor_slot(mut commands: Commands) {
 
 #[derive(Event)]
 pub struct PickupItem(pub Entity);
+
+#[derive(Event)]
+pub struct DropItem {
+    pub inventory: AssetId<Inventory>,
+    pub pos: IVec2,
+}
 
 #[derive(Component)]
 /// A marker for the entity that is set under the cursor when it holds and item
@@ -58,12 +65,12 @@ pub struct InventoryHandle {
 #[derive(SystemParam)]
 struct InventoryCursor<'w, 's> {
     commands: Commands<'w, 's>,
-    cursor: Single<'w, 's, Entity, With<CursorSlot>>,
+    cursor: Single<'w, 's, (Entity, Option<&'static HeldItem>), With<CursorSlot>>,
 }
 
 impl InventoryCursor<'_, '_> {
     pub fn hold(&mut self, item: Entity, origin: InventoryHandle) {
-        let cursor_entity = *self.cursor;
+        let cursor_entity = self.entity();
         self.commands.entity(cursor_entity).insert(HeldItem {
             item_entity: item,
             offset: Vec2::ZERO,
@@ -74,5 +81,23 @@ impl InventoryCursor<'_, '_> {
             (super::render::RenderedItem {
             item: item,
         }, super::node_render::ItemNode(cursor_entity)));
+    }
+
+    pub fn entity(&self) -> Entity {
+        self.cursor.0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.cursor.1.is_none()
+    }
+    
+    pub fn item(&self) -> Option<Entity> {
+        self.cursor.1.map(|rendered| rendered.item_entity)
+    }
+
+    pub fn drop(&mut self) {
+        self.commands.entity(self.entity()).remove::<HeldItem>();
+        #[cfg(feature = "node_rendering")]
+        self.commands.entity(self.entity()).remove::<(super::render::RenderedItem, super::node_render::ItemNode, ImageNode)>();
     }
 }
