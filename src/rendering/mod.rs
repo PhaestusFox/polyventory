@@ -17,6 +17,8 @@ pub mod render_prelude {
     pub use super::style::*;
     pub use super::{RenderedInventory, RenderedSlot};
 
+    pub use super::InventoryRenderPipeline;
+
     #[cfg(feature = "sprite_rendering")]
     pub use super::sprite_render::InventorySprite;
 
@@ -29,6 +31,7 @@ pub use style::{InventoryStyle, InventoryStyleAsset};
 #[derive(Default)]
 pub struct InventoryRenderPlugin {
     pub default_inventory_style: Option<InventoryStyleAsset>,
+    pub pipeline: InventoryRenderPipeline,
 }
 
 impl Plugin for InventoryRenderPlugin {
@@ -38,6 +41,16 @@ impl Plugin for InventoryRenderPlugin {
         app.add_observer(render::spawn_inventory_window);
 
         app.add_systems(Update, render::update_displayed_item_transform);
+
+
+        #[cfg(feature = "sprite_rendering")]
+        app.add_plugins(sprite_render::InventorySpritePlugin {
+            auto_require: matches!(self.pipeline, InventoryRenderPipeline::Sprite),
+        });
+        #[cfg(feature = "node_rendering")]
+        app.add_plugins(node_render::InventoryNodePlugin {
+            auto_require: matches!(self.pipeline, InventoryRenderPipeline::Node),
+        });
     }
 }
 
@@ -78,4 +91,18 @@ impl RenderedSlot {
     pub fn index(&self) -> usize {
         self.index
     }
+}
+
+#[derive(Default)]
+/// How an inventory will render by default.
+pub enum InventoryRenderPipeline {
+    #[default]
+    /// The user has opted to declare the pipeline for each `RenderedInventory`
+    Custom = 0,
+    #[cfg(feature = "node_rendering")]
+    /// `RenderedInventory`'s will have `InventoryNode` as a required component
+    Node = 1,
+    #[cfg(feature = "sprite_rendering")]
+    /// `RenderedInventory`'s will have `InventorySprite` as a required component
+    Sprite = 2,
 }

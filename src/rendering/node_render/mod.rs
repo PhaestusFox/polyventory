@@ -2,10 +2,15 @@ use bevy::prelude::*;
 
 use crate::{prelude::*, rendering::{RenderedInventory, RenderedSlot}};
 
-pub struct InventoryNodePlugin;
+pub struct InventoryNodePlugin {
+    pub auto_require: bool,
+}
 
 impl Plugin for InventoryNodePlugin {
     fn build(&self, app: &mut App) {
+        if self.auto_require {
+            app.register_required_components::<RenderedInventory, InventoryNode>();
+        }
         app.add_systems(PreUpdate, (spawn_inventory_window, update_image_cell_scale, item_node::update_item_node_image));
     }
 }

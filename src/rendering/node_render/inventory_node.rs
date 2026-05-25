@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Component)]
+#[derive(Component, Default)]
 #[require(Node = Node {
     margin: UiRect::all(Val::Auto),
     ..Node::DEFAULT

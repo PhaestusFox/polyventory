@@ -21,6 +21,7 @@ fn main() {
             cell_icon: Some("bbg/ui/GUICell.png".to_string()),
             background: None,
         }),
+        pipeline: InventoryRenderPipeline::Custom,
     });
     app.insert_resource(polyventory::prelude::ToolTipSettings {
         debug_info: true,
@@ -136,7 +137,6 @@ fn spawn_inventory(
     // let inventory = inventorys.add(test_inventory);
     commands.spawn((
         RenderedInventory::new(test_inventory_handle.clone()),
-        InventoryNode,
         Node {
             margin: UiRect::all(Val::Auto),
             left: Val::Px(100.0),

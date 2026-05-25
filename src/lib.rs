@@ -44,10 +44,7 @@ impl Plugin for PolyventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<inventory::Inventory>();
         app.init_asset::<inventory::ItemDescriptor>();
-        app.init_asset_loader::<inventory::ItemDescriptorLoader>();        
-        
-        #[cfg(feature = "node_rendering")]
-        app.add_plugins(rendering::node_render::InventoryNodePlugin);
+        app.init_asset_loader::<inventory::ItemDescriptorLoader>();
     }
 }
 
