@@ -26,7 +26,8 @@ pub(super) fn spawn_inventory_window(
         SpawnInventory::Ui(handle) => {
             commands.spawn((
                 Name::new("InventoryNode"),
-                super::node_render::InventoryNode::new(handle.clone()),
+                super::node_render::InventoryNode,
+                RenderedInventory::new(handle.clone()),
             ));
             return;
         },
@@ -43,7 +44,8 @@ pub(super) fn spawn_inventory_window(
             Name::new("Inventory Window"),
             Transform::default(),
             Visibility::default(),
-            InventoryRender::new(target.clone()),
+            InventorySprite,
+            RenderedInventory::new(target.clone()),
         ))
         .id();
     for (index, slot) in inventory.slots().iter().enumerate() {
@@ -58,7 +60,10 @@ pub(super) fn spawn_inventory_window(
                 Anchor::BOTTOM_LEFT,
                 Transform::from_translation((style.cell_size * slot.position.as_vec2()).extend(0.0)),
                 Pickable::default(),
-                SlotRender::new(root),
+                RenderedSlot {
+                    inventory: root,
+                    index,
+                },
                 ChildOf(root),
             )).with_children(|slot_root| {
                 for item in &slot.entries {
@@ -109,14 +114,14 @@ pub struct DisplayingItem(Vec<Entity>);
 
 pub(super) fn update_displayed_item_transform(
     mut changed: Query<(&Shape, &mut Transform, Option<&ChildOf>), Changed<Shape>>,
-    slots: Query<&SlotRender>,
+    slots: Query<&RenderedSlot>,
     inventorys: Query<&InventoryStyleHandle>,
     styles: Res<Assets<InventoryStyle>>,
 ) {
     for (shape, mut transform, parent) in &mut changed {
         let size = if let Some(slot) = parent {
             if let Ok(slot) = slots.get(slot.parent())
-                && let Ok(style) = inventorys.get(slot.entity)
+                && let Ok(style) = inventorys.get(slot.inventory)
             {
                 styles
                     .get(style.id())
@@ -136,18 +141,5 @@ pub(super) fn update_displayed_item_transform(
         let mut new_transform = shape.transform(size);
         new_transform.translation.z = 1.;
         *transform = new_transform;
-    }
-}
-
-#[derive(Component)]
-#[component(immutable)]
-pub struct InventorySlot {
-    pub(crate) inventory: Entity,
-    pub(crate) index: usize,
-}
-
-impl InventorySlot {
-    pub fn index(&self) -> usize {
-        self.index
     }
 }

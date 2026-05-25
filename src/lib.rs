@@ -6,10 +6,12 @@ use bevy::{
 mod inventory;
 #[cfg(feature = "rendering")]
 mod mouse_interaction;
+#[cfg(feature = "rendering")]
+mod rendering;
 
 pub mod prelude {
     pub use crate::inventory::{
-        Cells, Entry, Inventory, InventoryRender, Item, ItemDescriptor, Orientation, Shape, Slot,
+        Cells, Entry, Inventory, Item, ItemDescriptor, Orientation, Shape, Slot,
         SlotType,
     };
 
@@ -21,17 +23,20 @@ pub mod prelude {
     pub use crate::mouse_interaction::{ToolTipPlugin, ToolTipSettings};
     #[cfg(feature = "rendering")]
     pub use crate::rendering::render_prelude::*;
-    #[cfg(feature = "ui_node")]
+    #[cfg(feature = "node_rendering")]
     mod node {
         pub use crate::rendering::node_render::InventoryNode;
         pub use crate::rendering::node_render::InventoryNodePlugin;
     }
-    #[cfg(feature = "ui_node")]
+    #[cfg(feature = "node_rendering")]
     pub use node::InventoryNode;
 }
 
 #[cfg(feature = "rendering")]
-pub use rendering::InventoryRenderPlugin;
+pub use rendering::render_prelude;
+
+#[cfg(feature = "rendering")]
+pub use render_prelude::InventoryRenderPlugin;
 
 pub struct PolyventoryPlugin;
 
@@ -39,15 +44,10 @@ impl Plugin for PolyventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<inventory::Inventory>();
         app.init_asset::<inventory::ItemDescriptor>();
-        app.init_asset_loader::<inventory::ItemDescriptorLoader>();
-
-        app.register_type::<inventory::InventoryRender>();
+        app.init_asset_loader::<inventory::ItemDescriptorLoader>();        
         
-        
-        #[cfg(feature = "ui_node")]
+        #[cfg(feature = "node_rendering")]
         app.add_plugins(rendering::node_render::InventoryNodePlugin);
     }
 }
 
-#[cfg(feature = "rendering")]
-mod rendering;

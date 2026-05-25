@@ -14,9 +14,10 @@ bevy = { version = "0.18", features = ["default"] }
 rand = "*"
 
 [features]
-default = ["tooltips", "rendering", "ui_node"]
+default = ["tooltips", "node_rendering", "sprite_rendering"]
 rendering = []
-ui_node = ["rendering"]
+node_rendering = ["rendering"]
+sprite_rendering = ["rendering"]
 tooltips = ["bevy/experimental_bevy_feathers"]
 
 [[example]]

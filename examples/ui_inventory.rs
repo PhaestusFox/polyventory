@@ -145,12 +145,16 @@ fn spawn_inventory(
         background: None,
     };
     let style = styles.add(style);
-    commands.spawn((InventoryNode::new(test_inventory_handle.clone()), Name::new("Test Inventory Node")));
+    commands.spawn((
+        RenderedInventory::new(test_inventory_handle.clone()),
+        Name::new("Test Inventory Node"),
+        InventoryNode,
+    ));
     commands.spawn((Node {
         margin: UiRect::all(Val::Auto),
         left: Val::Px(200.0),
         top: Val::Px(50.0),
         ..Default::default()
-    }, InventoryNode::new(test_inventory_handle.clone()), Name::new("Test Inventory Node"), InventoryStyleHandle(style)));
+    }, RenderedInventory::new(test_inventory_handle.clone()), InventoryNode, Name::new("Test Inventory Node"), InventoryStyleHandle(style)));
 
 }

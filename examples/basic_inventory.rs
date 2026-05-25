@@ -135,7 +135,8 @@ fn spawn_inventory(
 
     // let inventory = inventorys.add(test_inventory);
     commands.spawn((
-        InventoryNode::new(test_inventory_handle.clone()),
+        RenderedInventory::new(test_inventory_handle.clone()),
+        InventoryNode,
         Node {
             margin: UiRect::all(Val::Auto),
             left: Val::Px(100.0),

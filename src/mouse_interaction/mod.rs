@@ -4,8 +4,8 @@ mod tooltip;
 pub use tooltip::{ToolTipPlugin, ToolTipSettings};
 
 use crate::{
-    inventory::{Inventory, InventoryRender, Item, ItemDescriptor, Orientation, Shape, SlotRender},
-    mouse_interaction::tooltip::ToolTipAction,
+    inventory::{Inventory, Item, ItemDescriptor, Orientation, Shape},
+    mouse_interaction::tooltip::ToolTipAction, rendering::RenderedInventory,
 };
 
 use bevy::{ecs::system::SystemParam, input::mouse::AccumulatedMouseMotion, prelude::*, window::PrimaryWindow};
@@ -47,10 +47,10 @@ fn pickup_item(
     click: On<Pointer<Click>>,
     mut commands: Commands,
     hand: Hand,
-    inventorys: Query<AnyOf<(&InventoryRender, &InventoryNode)>>,
+    inventorys: Query<&RenderedInventory>,
     mut inventory_manager: InventoryManager,
     mut items: Query<(Entity, &ChildOf, &DisplayedItem, AnyOf<(&GlobalTransform, &UiGlobalTransform)>)>,
-    mut slots: Query<&InventorySlot>,
+    mut slots: Query<&RenderedSlot>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
     if hand.held_item.is_some() {
@@ -69,21 +69,9 @@ fn pickup_item(
         warn!("Clicked Item is not in an inventory slot");
         return;
     };
-    let inventory_handle = match inventorys.get(slot_render.inventory) {
-        Ok((_, Some(node))) => {
-            node.0.id()
-        },
-        Ok((Some(inventory_render), _)) => {
-            inventory_render.id()
-        },
-        Ok((None, None)) => {
-            warn!("Clicked Item is not in an inventory");
-            return;
-        }
-        Err(_) => {
-            warn!("Clicked item is not in an inventory");
-            return;
-        }
+    let Ok(inventory_handle) = inventorys.get(slot_render.inventory) else {
+        warn!("Clicked inventory not found");
+        return;
     };
     let Some(mut inventory) = inventory_manager.open_inventory(inventory_handle) else {
         warn!("Failed to open inventory {:?}", slot_render.inventory);
@@ -115,7 +103,7 @@ fn pickup_item(
     commands.insert_resource(HeldItem {
         entity: icon,
         offset,
-        origin: (inventory_handle, entry, slot),
+        origin: (inventory_handle.into(), entry, slot),
     });
 }
 
@@ -129,7 +117,7 @@ fn drop_item(
     click: On<DropItem>,
     mut commands: Commands,
     hand: Hand,
-    inventorys: Query<&InventoryRender>,
+    inventorys: Query<&RenderedInventory>,
     mut icons: Query<(&DisplayedItem, &Shape)>,
     mut inventory_manager: InventoryManager,
 ) {
@@ -139,7 +127,7 @@ fn drop_item(
         return;
     };
     let Ok(inventory_render) = inventorys.get(click.inventory) else {
-        trace!("Inventory not found, ignoring drop");
+        trace!("Inventory({:?}) not found, ignoring drop", click.inventory);
         return;
     };
     let Some(mut inventory) = inventory_manager.open_inventory(inventory_render) else {

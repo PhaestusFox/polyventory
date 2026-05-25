@@ -1,6 +1,6 @@
-use bevy::{prelude::*, sprite::Anchor};
+use bevy::prelude::*;
 
-use crate::{inventory, prelude::*, rendering::render::InventorySlot};
+use crate::{prelude::*, rendering::{RenderedInventory, RenderedSlot}};
 
 pub struct InventoryNodePlugin;
 
@@ -19,13 +19,13 @@ pub use item_node::ItemNode;
 
 fn spawn_inventory_window(
     mut commands: Commands,
-    new: Populated<(Entity, &InventoryNode), Added<InventoryNode>>,
+    new: Populated<(Entity, &RenderedInventory), Added<InventoryNode>>,
     mut inventory_manager: InventoryManager,
     styles: InventoryStyler,
 ) {
     for (entity, node) in new {
         let Some(inventory) = inventory_manager.open_inventory(node) else {
-            warn!("Failed to get Inventory({:?}) for Node({:?})", node.0, entity);
+            warn!("Failed to get Inventory({:?}) for Node({:?})", node.inventory, entity);
             continue;
         };
         let style = styles.style(entity);
@@ -38,7 +38,7 @@ fn spawn_inventory_window(
         for (i, slot) in inventory.slots().iter().enumerate() {
             commands.spawn((
                 SlotNode,
-                InventorySlot { index: i, inventory: entity },
+                RenderedSlot { index: i, inventory: entity },
                 Node {
                     position_type: PositionType::Absolute,
                     width: Val::Px(slot.size.x as f32 * style.cell_size.x),
@@ -75,7 +75,7 @@ fn spawn_inventory_window(
 }
 
 fn update_image_cell_scale(
-    mut images: Populated<(&mut ImageNode, &InventorySlot), Added<InventorySlot>>,
+    mut images: Populated<(&mut ImageNode, &RenderedSlot), Added<RenderedSlot>>,
     styles: InventoryStyler,
     image_assets: Res<Assets<Image>>,
 ) {
