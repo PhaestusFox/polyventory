@@ -227,4 +227,12 @@ impl Inventory {
     pub fn get_slot(&self, index: usize) -> Option<&Slot> {
         self.slots.get(index)
     }
+
+    pub fn contains(&self, item: Entity) -> bool {
+        self.slots.iter().any(|slot| {
+            slot.entries
+                .iter()
+                .any(|entry| entry.entity == item)
+        })
+    }
 }

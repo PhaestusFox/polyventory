@@ -23,13 +23,6 @@ pub mod prelude {
     pub use crate::mouse_interaction::{ToolTipPlugin, ToolTipSettings};
     #[cfg(feature = "rendering")]
     pub use crate::rendering::render_prelude::*;
-    #[cfg(feature = "node_rendering")]
-    mod node {
-        pub use crate::rendering::node_render::InventoryNode;
-        pub use crate::rendering::node_render::InventoryNodePlugin;
-    }
-    #[cfg(feature = "node_rendering")]
-    pub use node::InventoryNode;
 }
 
 #[cfg(feature = "rendering")]

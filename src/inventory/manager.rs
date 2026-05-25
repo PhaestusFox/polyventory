@@ -26,6 +26,15 @@ impl InventoryManager<'_, '_> {
     pub fn create_inventory(&mut self, inventory: Inventory) -> Handle<Inventory> {
         self.inventory_assets.add(inventory)
     }
+
+    pub fn find_item(&self, item: Entity) -> Option<AssetId<Inventory>> {
+        for (handle, inventory) in self.inventory_assets.iter() {
+            if inventory.contains(item) {
+                return Some(handle);
+            }
+        }
+        None
+    }
 }
 
 pub struct InventoryCommands<'w, 's, 'a> {

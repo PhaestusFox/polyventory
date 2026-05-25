@@ -64,7 +64,7 @@ fn spawn_inventory_window(
                     let size = entry.shape.size().as_vec2() * style.cell_size;
                     root.spawn((
                         ItemNode(entity),
-                        DisplayedItem {
+                        RenderedItem {
                             item: entry.entity,
                         },
                         Node {

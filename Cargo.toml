@@ -14,11 +14,13 @@ bevy = { version = "0.18", features = ["default"] }
 rand = "*"
 
 [features]
-default = ["tooltips", "node_rendering", "sprite_rendering"]
+default = ["tooltips", "node_rendering", "sprite_rendering", "mouse_interaction"]
 rendering = []
 node_rendering = ["rendering"]
 sprite_rendering = ["rendering"]
-tooltips = ["bevy/experimental_bevy_feathers"]
+mouse_interaction = ["interaction"]
+interaction = []
+tooltips = ["bevy/experimental_bevy_feathers", "interaction"]
 
 [[example]]
 name = "basic_inventory"

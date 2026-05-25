@@ -301,7 +301,7 @@ fn detect_item_hover(
     mouse: On<Pointer<Over>>,
     mut actions: MessageWriter<ToolTipAction>,
     // dont know what to call the visual representation of an item
-    icons: Query<&DisplayedItem>,
+    icons: Query<&RenderedItem>,
 ) {
     // check we just hovered over an item icon
     let Ok(clicked) = icons.get(mouse.entity) else {
@@ -316,7 +316,7 @@ fn detect_item_hover(
 fn detect_item_hover_exit(
     mouse: On<Pointer<Out>>,
     mut actions: MessageWriter<ToolTipAction>,
-    icons: Query<&DisplayedItem>,
+    icons: Query<&RenderedItem>,
 ) {
     if icons.contains(mouse.entity) {
         actions.write(ToolTipAction::close());

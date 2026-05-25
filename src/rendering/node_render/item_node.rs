@@ -5,7 +5,7 @@ use super::*;
 pub struct ItemNode(pub Entity);
 
 pub(super) fn update_item_node_image(
-    mut changed: Query<(&DisplayedItem, &mut ImageNode, &mut Node, &ItemNode, &mut UiTransform), Changed<DisplayedItem>>,
+    mut changed: Query<(&RenderedItem, &mut ImageNode, &mut Node, &ItemNode, &mut UiTransform), Changed<RenderedItem>>,
     items: Query<(&Item, &Shape, &SlotType)>,
     descriptors: Res<Assets<ItemDescriptor>>,
     styles: InventoryStyler,

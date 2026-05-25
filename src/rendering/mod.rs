@@ -13,7 +13,7 @@ mod style;
 
 pub mod render_prelude {
     pub use super::InventoryRenderPlugin;
-    pub use super::render::{DisplayedItem, SpawnInventory};
+    pub use super::render::{RenderedItem, SpawnInventory};
     pub use super::style::*;
     pub use super::{RenderedInventory, RenderedSlot};
 
@@ -51,6 +51,9 @@ impl Plugin for InventoryRenderPlugin {
         app.add_plugins(node_render::InventoryNodePlugin {
             auto_require: matches!(self.pipeline, InventoryRenderPipeline::Node),
         });
+
+        #[cfg(feature = "interaction")]
+        app.add_plugins(interaction::InteractionPlugin);
     }
 }
 

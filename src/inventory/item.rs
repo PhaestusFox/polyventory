@@ -104,6 +104,10 @@ impl ItemDescriptor {
     }
 
     pub fn spawn(&self) -> impl Bundle {}
+
+    pub fn is_moveable(&self) -> bool {
+        true
+    }
 }
 
 #[derive(TypePath, Default)]

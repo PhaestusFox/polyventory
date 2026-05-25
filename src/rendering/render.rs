@@ -92,7 +92,7 @@ pub(super) fn spawn_inventory_window(
                             ..Default::default()
                         },
                         Anchor::BOTTOM_LEFT,
-                        DisplayedItem { item: item.entity},
+                        RenderedItem { item: item.entity},
                         item.shape.clone(),
                         Pickable::default(),
                     ));
@@ -102,15 +102,15 @@ pub(super) fn spawn_inventory_window(
 }
 
 #[derive(Component, Reflect)]
-#[relationship(relationship_target = DisplayingItem)]
-pub struct DisplayedItem {
+#[relationship(relationship_target = RenderingItem)]
+pub struct RenderedItem {
     #[relationship]
     pub item: Entity,
 }
 
 #[derive(Component, Default)]
-#[relationship_target(relationship = DisplayedItem)]
-pub struct DisplayingItem(Vec<Entity>);
+#[relationship_target(relationship = RenderedItem)]
+pub struct RenderingItem(Vec<Entity>);
 
 pub(super) fn update_displayed_item_transform(
     mut changed: Query<(&Shape, &mut Transform, Option<&ChildOf>), Changed<Shape>>,

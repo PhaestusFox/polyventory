@@ -1,7 +1,6 @@
 use bevy::{input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use polyventory::prelude::*;
-use rand::seq::IndexedRandom;
 
 fn main() {
     let mut app = App::new();

@@ -16,7 +16,7 @@ pub struct MouseInventoryPlugin;
 
 impl Plugin for MouseInventoryPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(pickup_item);
+        // app.add_observer(pickup_item);
         app.add_observer(drop_item);
         app.add_observer(rotate_held_item);
         app.add_systems(
@@ -49,7 +49,7 @@ fn pickup_item(
     hand: Hand,
     inventorys: Query<&RenderedInventory>,
     mut inventory_manager: InventoryManager,
-    mut items: Query<(Entity, &ChildOf, &DisplayedItem, AnyOf<(&GlobalTransform, &UiGlobalTransform)>)>,
+    mut items: Query<(Entity, &ChildOf, &RenderedItem, AnyOf<(&GlobalTransform, &UiGlobalTransform)>)>,
     mut slots: Query<&RenderedSlot>,
     window: Single<&Window, With<PrimaryWindow>>,
 ) {
@@ -118,7 +118,7 @@ fn drop_item(
     mut commands: Commands,
     hand: Hand,
     inventorys: Query<&RenderedInventory>,
-    mut icons: Query<(&DisplayedItem, &Shape)>,
+    mut icons: Query<(&RenderedItem, &Shape)>,
     mut inventory_manager: InventoryManager,
 ) {
     println!("Trying to drop item into inventory");
