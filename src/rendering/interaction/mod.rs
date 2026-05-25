@@ -69,5 +69,10 @@ impl InventoryCursor<'_, '_> {
             offset: Vec2::ZERO,
             origin,
         });
+        #[cfg(feature = "node_rendering")]
+        self.commands.entity(cursor_entity).insert(
+            (super::render::RenderedItem {
+            item: item,
+        }, super::node_render::ItemNode(cursor_entity)));
     }
 }
