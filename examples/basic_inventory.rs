@@ -28,7 +28,6 @@ fn main() {
         ..Default::default()
     });
     app.add_plugins((
-        polyventory::prelude::MouseInventoryPlugin,
         polyventory::prelude::ToolTipPlugin,
     ));
     app.init_resource::<LootTable>();
@@ -36,10 +35,6 @@ fn main() {
     app.add_systems(OnExit(Loaded::False), spawn_inventory);
     app.init_state::<Loaded>();
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
-    app.add_systems(
-        Update,
-        spawn_main_inventory.run_if(input_just_pressed(KeyCode::Escape)),
-    );
     app.run();
 }
 
@@ -97,12 +92,11 @@ fn spawn_inventory(
     mut inventory_manager: InventoryManager,
     loot: Res<LootTable>,
 ) {
-    let mut test_inventory = Inventory::new("Test Inventory", 5, 7);
-    test_inventory.add_slot(Slot {
-        slot_type: vec![SlotType::Untyped],
-        position: IVec2::new(0, 8),
-        size: UVec2::new(5, 2),
-        entries: vec![],
+    let mut test_inventory = Inventory::new("Test Inventory");
+    test_inventory.add_slot(CellType::Untyped, Shape {
+        offset: IVec2::ZERO,
+        orientation: Orientation::Deg0,
+        layout: Layout::Rect { size: UVec2::new(5, 7) },
     });
     let s = &mut inventory_manager;
     let test_inventory_handle = s.create_inventory(test_inventory);
@@ -116,13 +110,13 @@ fn spawn_inventory(
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
         IVec2::new(1, 8),
-        Orientation::Identity,
+        Orientation::Deg0,
     );
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle, IVec2::new(1, 8), Orientation::Rot270);
+    let r = test_inventory.spawn_item_at(water_bottle, IVec2::new(1, 8), Orientation::Deg270);
     info!("Spawning water bottle at 1,8 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
@@ -141,15 +135,12 @@ fn spawn_inventory(
             margin: UiRect::all(Val::Auto),
             left: Val::Px(100.0),
             ..Default::default()
-        }
+        },
+        InventoryNode,
     ));
 
-    commands.insert_resource(MainInventory(test_inventory_handle));
-}
-
-#[derive(Resource)]
-struct MainInventory(Handle<Inventory>);
-
-fn spawn_main_inventory(mut commands: Commands, main: Res<MainInventory>) {
-    commands.trigger(SpawnInventory::Sprite(main.0.clone()));
+    commands.spawn((
+        RenderedInventory::new(test_inventory_handle.clone()),
+        InventorySprite,
+    ));
 }

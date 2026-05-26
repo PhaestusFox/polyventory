@@ -54,8 +54,8 @@ impl Into<AssetId<ItemDescriptor>> for &Item {
 pub struct ItemDescriptor {
     name: String,
     description: Option<String>,
-    size: Vec<(SlotType, Shape)>,
-    image: Vec<(SlotType, (Handle<Image>, UVec2))>,
+    size: Vec<(CellType, Layout)>,
+    image: Vec<(CellType, (Handle<Image>, UVec2))>,
     sub_inventory: Option<Handle<InventoryDescriptor>>,
 }
 
@@ -64,15 +64,15 @@ impl ItemDescriptor {
         &self.name
     }
 
-    pub fn size(&self, slot: &SlotType) -> Option<Shape> {
-        for (slot_type, shape) in &self.size {
+    pub fn size(&self, slot: &CellType) -> Option<Layout> {
+        for (slot_type, layout) in &self.size {
             if slot_type == slot {
-                return Some(shape.clone());
+                return Some(layout.clone());
             }
         }
         None
     }
-    pub fn get_image(&self, slot: &SlotType) -> Option<(Handle<Image>, UVec2)> {
+    pub fn get_image(&self, slot: &CellType) -> Option<(Handle<Image>, UVec2)> {
         for (slot_type, image) in &self.image {
             if slot_type == slot {
                 return Some(image.clone());
@@ -81,7 +81,7 @@ impl ItemDescriptor {
         None
     }
 
-    pub fn image(&self, slot: impl Iterator<Item = SlotType>) -> Option<(Handle<Image>, UVec2)> {
+    pub fn image(&self, slot: impl Iterator<Item = CellType>) -> Option<(Handle<Image>, UVec2)> {
         for slot_type in slot {
             for (image_slot, image) in &self.image {
                 if image_slot == &slot_type {
@@ -92,13 +92,7 @@ impl ItemDescriptor {
         None
     }
 
-    pub fn valid_sizes(&self) -> impl Iterator<Item = (&SlotType, &Shape)> {
-        self.size
-            .iter()
-            .map(|(slot_type, shape)| (slot_type, shape))
-    }
-
-    pub fn valid_images(&self) -> impl Iterator<Item = (&SlotType, &(Handle<Image>, UVec2))> {
+    pub fn valid_images(&self) -> impl Iterator<Item = (&CellType, &(Handle<Image>, UVec2))> {
         self.image
             .iter()
             .map(|(slot_type, image)| (slot_type, image))
@@ -115,6 +109,10 @@ impl ItemDescriptor {
     }
     pub fn sub_inventory(&self) -> Option<&Handle<InventoryDescriptor>> {
         self.sub_inventory.as_ref()
+    }
+
+    pub fn sizes(&self) -> impl Iterator<Item = &(CellType, Layout)> {
+        self.size.iter()
     }
 }
 
@@ -296,8 +294,8 @@ impl Mode {
         &self,
         line: &str,
         name: &mut String,
-        size: &mut Vec<(SlotType, Shape)>,
-        image: &mut Vec<(SlotType, (Handle<Image>, UVec2))>,
+        size: &mut Vec<(CellType, Layout)>,
+        image: &mut Vec<(CellType, (Handle<Image>, UVec2))>,
         ctx: &mut bevy::asset::LoadContext,
     ) -> Result<(), LoadItemDescriptorError> {
         match self {
@@ -331,7 +329,7 @@ impl Mode {
         }
     }
 
-    fn parse_size(size_str: &str) -> Result<(SlotType, Shape), LoadItemDescriptorError> {
+    fn parse_size(size_str: &str) -> Result<(CellType, Layout), LoadItemDescriptorError> {
         let mut parts = size_str.split(':');
         let slot_type = parts
             .next()
@@ -356,19 +354,13 @@ impl Mode {
             .map_err(|_| LoadItemDescriptorError::InvalidSize("y", y.to_string()))?;
         Ok((
             slot_type.parse().unwrap(),
-            Shape {
-                cells: Cells::Rect {
-                    size: UVec2::new(x, y),
-                },
-                position: IVec2::ZERO,
-                orientation: Orientation::Identity,
-            },
+            Layout::Rect { size: UVec2::new(x, y) },
         ))
     }
 
     fn parse_image(
         image_line: &str,
-    ) -> Result<(SlotType, (String, UVec2)), LoadItemDescriptorError> {
+    ) -> Result<(CellType, (String, UVec2)), LoadItemDescriptorError> {
         let mut parts = image_line.split(':');
         let slot_type = parts
             .next()

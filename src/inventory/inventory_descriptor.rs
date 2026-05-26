@@ -10,24 +10,13 @@ use super::*;
 
 #[derive(Asset, Reflect)]
 pub struct InventoryDescriptor {
-    slots: HashMap<SlotType, Shape>,
+    slots: HashMap<CellType, Shape>,
 }
 
 impl InventoryDescriptor {
     pub fn create_inventory(&self) -> Inventory {
-        let mut inventory = Inventory::new_empty();
-        for (slot_type, shape) in &self.slots {
-            println!("adding inv slot: {:?}:{:?}", slot_type, shape);
-            inventory.add_slot(Slot {
-                slot_type: vec![slot_type.clone()],
-                position: shape.offset,
-                size: match shape.layout {
-                    Layout::Rect { size } => size,
-                },
-                entries: vec![],
-            });
-        }
-        inventory
+        let c = self.slots.clone().into_iter();
+        Inventory::new_with_slots(c)
     }
 }
 
@@ -43,7 +32,7 @@ impl FromStr for InventoryDescriptor {
                 if let Some((slot_type, shape)) = slot.take() {
                     slots.insert(slot_type, shape);
                 }
-                slot = Some((SlotType::Untyped, Shape::default()));
+                slot = Some((CellType::Untyped, Shape::default()));
             }
             let line = line.trim_start_matches(|c: char| c == '{' || c.is_whitespace());
             let Some((id, val)) = line.split_once(':') else {
@@ -51,7 +40,7 @@ impl FromStr for InventoryDescriptor {
             };
             match id.trim() {
                 "slot" => {
-                    let t = SlotType::from_str(val.trim()).expect("any string is a valid slot");
+                    let t = CellType::from_str(val.trim()).expect("any string is a valid slot");
                     if let Some((slot_type, _)) = slot.as_mut() {
                         *slot_type = t;
                     } else {
@@ -63,7 +52,7 @@ impl FromStr for InventoryDescriptor {
                     if let Some((_, shape)) = slot.as_mut() {
                         shape.offset.x = x;
                     } else {
-                        slot = Some((SlotType::Untyped, Shape {
+                        slot = Some((CellType::Untyped, Shape {
                             offset: IVec2::new(x, 0),
                             ..default()
                         }));
@@ -74,7 +63,7 @@ impl FromStr for InventoryDescriptor {
                     if let Some((_, shape)) = slot.as_mut() {
                         shape.offset.y = y;
                     } else {
-                        slot = Some((SlotType::Untyped, Shape {
+                        slot = Some((CellType::Untyped, Shape {
                             offset: IVec2::new(0, y),
                             ..default()
                         }));
@@ -89,7 +78,7 @@ impl FromStr for InventoryDescriptor {
                             }
                         }
                     } else {
-                        slot = Some((SlotType::Untyped, Shape {
+                        slot = Some((CellType::Untyped, Shape {
                             layout: Layout::Rect { size: UVec2::new(w, 0) },
                             ..default()
                         }));
@@ -104,7 +93,7 @@ impl FromStr for InventoryDescriptor {
                             }
                         }
                     } else {
-                        slot = Some((SlotType::Untyped, Shape {
+                        slot = Some((CellType::Untyped, Shape {
                             layout: Layout::Rect { size: UVec2::new(0, h) },
                             ..default()
                         }));

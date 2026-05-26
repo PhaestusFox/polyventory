@@ -1,10 +1,13 @@
+use bevy::platform::collections::HashSet;
+
 use super::*;
+use crate::prelude::*;
 
 #[derive(SystemParam)]
 pub struct InventoryManager<'w, 's> {
     inventory_assets: ResMut<'w, Assets<Inventory>>,
     commands: Commands<'w, 's>,
-    items: Query<'w, 's, &'static Item>,
+    items: Query<'w, 's, (&'static Item, Option<&'static ItemInventory>)>,
     descriptors: Res<'w, Assets<ItemDescriptor>>,
     inventory_descriptors: Res<'w, Assets<InventoryDescriptor>>,
 }
@@ -49,7 +52,7 @@ pub struct InventoryCommands<'w, 's, 'a> {
     pub commands: Commands<'w, 's>,
     current_inventory: Inventory,
     inv_id: AssetId<Inventory>,
-    items: Query<'w, 's, &'static Item>,
+    items: Query<'w, 's, (&'static Item, Option<&'static ItemInventory>)>,
     descriptors: &'a Assets<ItemDescriptor>,
     inventory_descriptors: &'a Assets<InventoryDescriptor>,
     all_inventories: &'a mut Assets<Inventory>,
@@ -64,24 +67,23 @@ impl Drop for InventoryCommands<'_, '_, '_> {
 
 impl InventoryCommands<'_, '_, '_> {
     /// Add an existing item from the world to this inventory.
-    pub fn add_item(&mut self, item: Entity) -> Result<usize, AddFailed> {
-        let Ok(handle) = self.items.get(item) else {
+    pub fn add_item(&mut self, item: Entity) -> Result<(), AddFailed> {
+        let Ok((handle, sub_inv)) = self.items.get(item) else {
             return Err(AddFailed::EntityIsNotAnItem(item));
         };
         let Some(descriptor) = self.descriptors.get(handle) else {
             return Err(AddFailed::ItemDescriptorNotFound(handle.descriptor.clone()));
         };
-        match self.current_inventory.add_item(descriptor, item) {
-            Some((slot, shape, slot_type)) => {
+        match self.current_inventory.add_item(descriptor, item, sub_inv.map(|s| s.0.id())) {
+            Some((slot, shape)) => {
                 info!(
-                    "Added {} to inventory in slot {}@{} with slot type {:?}",
+                    "Added {} to inventory in slot {:?}@{:?}",
                     descriptor.name(),
                     slot,
-                    shape.position,
-                    slot_type
+                    shape
                 );
-                self.commands.entity(item).insert((shape, slot_type));
-                Ok(slot)
+                self.commands.entity(item).insert(InInventory(self.inv_id, slot));
+                Ok(())
             }
             None => {
                 warn!(
@@ -96,50 +98,64 @@ impl InventoryCommands<'_, '_, '_> {
     pub fn add_item_at(
         &mut self,
         item: Entity,
-        position: IVec2,
-        orientation: Orientation,
-    ) -> Result<(usize, Shape), AddFailed> {
-        let Ok(handle) = self.items.get(item) else {
+        shape: Shape,
+    ) -> Result<(), AddFailed> {
+        let Ok((handle, sub_inv)) = self.items.get(item) else {
             return Err(AddFailed::EntityIsNotAnItem(item));
         };
         let Some(descriptor) = self.descriptors.get(handle) else {
             return Err(AddFailed::ItemDescriptorNotFound(handle.descriptor.clone()));
         };
-        match self
-            .current_inventory
-            .add_item_at(descriptor, item, position, orientation)
-        {
-            Ok((slot, shape)) => {
-                info!(
-                    "Added {} to inventory in slot {}@{:?} with orientation {:?}",
-                    descriptor.name(),
-                    slot,
-                    shape.position,
-                    shape.orientation
-                );
-                self.commands.entity(item).insert((shape.clone(),));
-                Ok((slot, shape))
+        for (slot_type, slot_layout) in descriptor.sizes() {
+            if shape.layout != *slot_layout {
+                continue;
             }
-            Err(e) => {
-                warn!(
-                    "Failed to add {} to inventory: {:?} (not yet fully implemented)",
-                    descriptor.name(),
-                    e
-                );
-                Err(AddFailed::NotYetFullImplemented)
+            if self.current_inventory.can_fit(slot_type, &shape) {
+                self.current_inventory.insert_item(item, entry::Entry {
+                    shape: shape.clone(),
+                    sub_inventory: sub_inv.map(|s| s.0.id()),
+                });
+                return Ok(())
             }
         }
+        Err(AddFailed::NoSlotsAcceptThisItem)
     }
 
     pub fn spawn_item(&mut self, item: Handle<ItemDescriptor>) -> Result<Entity, AddFailed> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
         };
-        // self.all_inventories.get_handle_provider().
+        let Some((cell_type, shape)) = self.fit(descriptor) else {
+            return Err(AddFailed::DoesNotFit(self.inv_id));
+        };
+        self.spawn_item_at_internal(descriptor, item, cell_type, shape)
+    }
+
+    pub fn spawn_item_at(&mut self, item: Handle<ItemDescriptor>, offset: IVec2, orientation: Orientation) -> Result<Entity, AddFailed> {
+        let Some(descriptor) = self.descriptors.get(&item) else {
+            return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
+        };
+        let mut shape = Shape {
+            layout: Layout::default(),
+            offset,
+            orientation,
+        };
+        for (cell_type, slot_layout) in descriptor.sizes() {
+            shape.layout = slot_layout.clone();
+            if !self.current_inventory.can_fit(cell_type, &shape) {
+                continue;
+            }
+            return self.spawn_item_at_internal(descriptor, item, cell_type.clone(), shape);
+        }
+        Err(AddFailed::DoesNotFit(self.inv_id))
+    }
+
+    fn spawn_item_at_internal(&mut self, descriptor: &ItemDescriptor, item: Handle<ItemDescriptor>, cell_type: CellType, shape: Shape) -> Result<Entity, AddFailed> {
         // todo - clean up if failed to add to inventory
         let entity = self
             .commands
-            .spawn((Item::new(item), descriptor.spawn(), InInventory(self.inv_id))).id();
+            .spawn((Item::new(item), descriptor.spawn(), InInventory(self.inv_id, cell_type))).id();
+        let sub: Option<AssetId<Inventory>>;
         if let Some(sub_inventory) = descriptor.sub_inventory() {
             let Some(inv_des) = self.inventory_descriptors.get(sub_inventory) else {
                 return Err(AddFailed::InventoryDescriptorNotFound(sub_inventory.clone()));
@@ -147,69 +163,45 @@ impl InventoryCommands<'_, '_, '_> {
             let mut inv = inv_des.create_inventory();
             inv.name = format!("{}({:?}) Inventory", descriptor.name(), entity);
             let inv_h = self.all_inventories.add(inv);
+            sub = Some(inv_h.id());
             self.commands.entity(entity).insert(ItemInventory(inv_h));
-            warn!("Spawn sub inventory for {}", descriptor.name());
-        }
-
-        match self.current_inventory.add_item(descriptor, entity) {
-            Some((slot, shape, slot_type)) => {
-                info!(
-                    "Added {} to inventory in slot {}@{} with slot type {:?}",
-                    descriptor.name(),
-                    slot,
-                    shape.position,
-                    slot_type
-                );
-                self.commands.entity(entity).insert((shape, slot_type));
-                Ok(entity)
-            }
-            None => {
-                warn!(
-                    "Failed to add {} to inventory: not yet fully implemented",
-                    descriptor.name()
-                );
-                Err(AddFailed::NotYetFullImplemented)
-            }
-        }
-    }
-
-    pub fn spawn_item_at(
-        &mut self,
-        item: Handle<ItemDescriptor>,
-        position: IVec2,
-        orientation: Orientation,
-    ) -> Result<Entity, AddFailed> {
-        let Some(descriptor) = self.descriptors.get(&item) else {
-            return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
+        } else {
+            sub = None;
         };
-        let (slot, shape, slot_type) = self
-            .current_inventory
-            .reserve_item_at(descriptor, position, orientation)?;
-        let entity = self
-            .commands
-            .spawn((Item::new(item), descriptor.spawn(), slot_type, shape.clone()))
-            .id();
-        self.current_inventory
-            .add_unchecked(slot, shape, entity)
-            .map_err(|_| AddFailed::SlotNotInInventory {
-                slot_index: slot,
-                num_slots: self.current_inventory.slots().len(),
-            })?;
+
+        self.insert_item(entity, entry::Entry {
+            shape,
+            sub_inventory: sub,
+        });
         Ok(entity)
     }
 
-    pub fn remove_item(&mut self, item: Entity) -> Result<(usize, Entry), RemoveFailed> {
-        use crate::inventory::traits::Searchable;
-        for (i, slot) in self.current_inventory.iter_slots_mut().enumerate() {
-            let Some(index) = slot.find(item) else {
-                continue;
-            };
-            return slot
-                .remove(index)
-                .map(|entry| (i, entry))
-                .ok_or(RemoveFailed::FailedToRemove);
+    /// Remove an item from the inventory recursively searching through any sub-inventories.
+    /// Returns the inventory the item was removed from
+    pub fn remove_item(&mut self, item: Entity) -> Result<AssetId<Inventory>, RemoveFailed> {
+        let mut checked = HashSet::new();
+        Self::find(self.inv_id, item, &self.all_inventories, &mut checked).ok_or(RemoveFailed::ItemNotFound(item))
+    }
+
+    fn find(check: AssetId<Inventory>, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<AssetId<Inventory>> {
+        let Some(inventory) = assets.get(check) else {
+            warn!("Failed to get inventory {:?} while trying to find item {:?}. Skipping.", check, item);
+            return None;
+        };
+        if inventory.contains(item) {
+            return Some(check);
         }
-        Err(RemoveFailed::ItemNotFound(item))
+        checked.insert(check);
+        for entry in inventory.iter_sub_inventories() {
+            if checked.contains(&entry) {
+                error!("Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.", entry, item);
+                continue;
+            }
+            if let Some(found) = Self::find(entry, item, assets, checked) {
+                return Some(found);
+            }
+        }
+        None
     }
 }
 
@@ -247,6 +239,8 @@ pub enum AddFailed {
     OverlapWithExistingItem { slot_index: usize, overlap_index: usize},
     #[error("No slots in inventory accept this item")]
     NoSlotsAcceptThisItem,
+    #[error("There is not space big enough to put this it in the inventory")]
+    DoesNotFit(AssetId<Inventory>),
 }
 
 #[derive(Debug, thiserror::Error)]

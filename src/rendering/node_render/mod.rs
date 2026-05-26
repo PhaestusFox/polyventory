@@ -24,33 +24,35 @@ pub use item_node::ItemNode;
 
 fn spawn_inventory_window(
     mut commands: Commands,
-    new: Populated<(Entity, &RenderedInventory), Added<InventoryNode>>,
+    mut new: Populated<(Entity, &RenderedInventory, Option<&mut ImageNode>), Added<InventoryNode>>,
     mut inventory_manager: InventoryManager,
     styles: InventoryStyler,
 ) {
-    for (entity, node) in new {
+    for (entity, node, back_ground) in new {
         let Some(inventory) = inventory_manager.open_inventory(node) else {
             warn!("Failed to get Inventory({:?}) for Node({:?})", node.inventory, entity);
             continue;
         };
         let style = styles.style(entity);
         if let Some(bkg) = style.background.clone() {
-            commands.entity(entity).insert(ImageNode {
-                image: bkg,
-                ..Default::default()
-            });
+            if let Some(mut image) = back_ground {
+                image.image = bkg;
+            } else {
+                commands.entity(entity).insert(ImageNode { image: bkg, ..Default::default() });
+            }
         }
-        for (i, slot) in inventory.slots().iter().enumerate() {
+        for (slot_type, shape) in inventory.slots() {
+            let size = shape.size().as_vec2() * style.cell_size;
+            let pos = shape.offset.as_vec2() * style.cell_size;
             commands.spawn((
                 SlotNode,
-                RenderedSlot { index: i, inventory: entity },
                 Node {
-                    position_type: PositionType::Absolute,
-                    width: Val::Px(slot.size.x as f32 * style.cell_size.x),
-                    height: Val::Px(slot.size.y as f32 * style.cell_size.y),
-                    top: Val::Px(slot.position.y as f32 * style.cell_size.y),
-                    left: Val::Px(slot.position.x as f32 * style.cell_size.x),
-                    ..Default::default()
+                position_type: PositionType::Absolute,
+                width: Val::Px(size.x),
+                height: Val::Px(size.y),
+                top: Val::Px(pos.y),
+                left: Val::Px(pos.x),
+                ..Default::default()
                 },
                 ImageNode {
                     image: style.cell_icon.clone(),
@@ -58,24 +60,58 @@ fn spawn_inventory_window(
                     ..Default::default()
                 },
                 ChildOf(entity),
-                Name::new(format!("Slot {}", i)),
-            )).with_children(|root| {
-                for entry in &slot.entries {
-                    let size = entry.shape.size().as_vec2() * style.cell_size;
-                    root.spawn((
-                        ItemNode(entity),
-                        RenderedItem {
-                            item: entry.entity,
-                        },
-                        Node {
-                            width: Val::Px(size.x),
-                            height: Val::Px(size.y),
-                            ..Default::default()
-                        },
-                    ));
-                }
-            });
+                ZIndex(-1),
+            ));
         }
+        for (item, shape) in inventory.items() {
+            let size = shape.size().as_vec2() * style.cell_size;
+            commands.spawn((
+                ItemNode(entity),
+                RenderedItem {
+                    item: *item,
+                },
+                Node {
+                    width: Val::Px(size.x),
+                    height: Val::Px(size.y),
+                    ..Default::default()
+                },
+                ChildOf(entity),
+            ));
+        }
+        // commands.spawn((
+        //     SlotNode,
+        //     RenderedSlot { index: i, inventory: entity },
+        //     Node {
+        //         position_type: PositionType::Absolute,
+        //         width: Val::Px(slot.size.x as f32 * style.cell_size.x),
+        //         height: Val::Px(slot.size.y as f32 * style.cell_size.y),
+        //         top: Val::Px(slot.position.y as f32 * style.cell_size.y),
+        //         left: Val::Px(slot.position.x as f32 * style.cell_size.x),
+        //         ..Default::default()
+        //     },
+        //     ImageNode {
+        //         image: style.cell_icon.clone(),
+        //         image_mode: NodeImageMode::Tiled { tile_x: true, tile_y: true, stretch_value: 1.0 },
+        //         ..Default::default()
+        //     },
+        //     ChildOf(entity),
+        //     Name::new(format!("Slot {}", i)),
+        // )).with_children(|root| {
+        //     for entry in &slot.entries {
+        //         let size = entry.shape.size().as_vec2() * style.cell_size;
+        //         root.spawn((
+        //             ItemNode(entity),
+        //             RenderedItem {
+        //                 item: entry.entity,
+        //             },
+        //             Node {
+        //                 width: Val::Px(size.x),
+        //                 height: Val::Px(size.y),
+        //                 ..Default::default()
+        //             },
+        //         ));
+        //     }
+        // });
     }
 }
 

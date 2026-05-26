@@ -8,27 +8,6 @@ use crate::inventory::slot::shape_iters::OrientationIter;
 
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Component, Reflect)]
-pub enum SlotType {
-    Untyped,
-    WaterTight,
-    Small,
-    Custom(Cow<'static, str>),
-}
-
-impl FromStr for SlotType {
-    type Err = Infallible;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Untyped" => Ok(SlotType::Untyped),
-            "WaterTight" => Ok(SlotType::WaterTight),
-            "Small" => Ok(SlotType::Small),
-            custom => Ok(SlotType::Custom(Cow::Owned(custom.to_string()))),
-        }
-    }
-}
-
 #[derive(Clone, Deref, Debug)]
 pub struct Entry {
     pub entity: Entity, // todo: Move this a layer up? have shape, position, rotation as a sub structure?
@@ -45,7 +24,7 @@ impl PartialEq<Entity> for Entry {
 #[derive(Clone, Reflect, Component)]
 pub struct Slot {
     #[reflect(ignore)]
-    pub slot_type: Vec<SlotType>,
+    pub slot_type: Vec<CellType>,
     pub position: IVec2,
     pub size: UVec2,
     #[reflect(ignore)]
@@ -226,89 +205,70 @@ pub enum FitFailure {
     OverlapsWith(usize, IVec2),
 }
 
-#[derive(Debug, Clone, Reflect, Component)]
-pub struct Shape {
-    pub cells: Cells,
-    pub position: IVec2,
-    pub orientation: Orientation,
-}
+// impl Shape {
+//     pub fn bounds(&self) -> Aabb2d {
+//         let Cells::Rect { size } = self.cells;
 
-impl Default for Shape {
-    fn default() -> Self {
-        Self {
-            cells: Cells::Rect {
-                size: UVec2::new(1, 1),
-            },
-            position: IVec2::ZERO,
-            orientation: Orientation::Identity,
-        }
-    }
-}
+//         let px = self.position.x as i32;
+//         let py = self.position.y as i32;
+//         let w = size.x as i32;
+//         let h = size.y as i32;
 
-impl Shape {
-    pub fn bounds(&self) -> Aabb2d {
-        let Cells::Rect { size } = self.cells;
+//         let (min, max) = match self.orientation {
+//             Orientation::Identity | Orientation::Rot0 => {
+//                 (IVec2::new(px, py), IVec2::new(px + w, py + h))
+//             }
+//             Orientation::Rot90 => (IVec2::new(px - h + 1, py - w + 1), IVec2::new(px + 1, py + 1)),
+//             Orientation::Rot180 => (
+//                 IVec2::new(px - w + 1, py - h + 1),
+//                 IVec2::new(px + 1, py + 1),
+//             ),
+//             Orientation::Rot270 => (IVec2::new(px, py - w + 1), IVec2::new(px + h, py + 1)),
+//         };
 
-        let px = self.position.x as i32;
-        let py = self.position.y as i32;
-        let w = size.x as i32;
-        let h = size.y as i32;
+//         Aabb2d {
+//             min: min.as_vec2(),
+//             max: max.as_vec2(),
+//         }
+//     }
 
-        let (min, max) = match self.orientation {
-            Orientation::Identity | Orientation::Rot0 => {
-                (IVec2::new(px, py), IVec2::new(px + w, py + h))
-            }
-            Orientation::Rot90 => (IVec2::new(px - h + 1, py - w + 1), IVec2::new(px + 1, py + 1)),
-            Orientation::Rot180 => (
-                IVec2::new(px - w + 1, py - h + 1),
-                IVec2::new(px + 1, py + 1),
-            ),
-            Orientation::Rot270 => (IVec2::new(px, py - w + 1), IVec2::new(px + h, py + 1)),
-        };
+//     pub fn transform(&self, cell_size: Vec2) -> Transform {
+//         Transform {
+//             translation: ((self.position.as_vec2() + self.orientation.offset()) * cell_size)
+//                 .extend(1.0),
+//             rotation: self.orientation.into(),
+//             ..Default::default()
+//         }
+//     }
+//     pub fn ui_transform(&self, cell_size: Vec2) -> UiTransform {
+//         let rot = self.orientation.ui_offset(self.size().as_vec2());
+//         // 15, -15
+//         let offset = (self.position.as_vec2() + rot) * cell_size;
+//         UiTransform {
+//             translation: Val2::new(Val::Px(offset.x), Val::Px(offset.y)),
+//             rotation: self.orientation.into(),
+//             ..Default::default()
+//         }
+//     }
 
-        Aabb2d {
-            min: min.as_vec2(),
-            max: max.as_vec2(),
-        }
-    }
+//     pub fn ocupies(&self, cell: IVec2) -> bool {
+//         let relative = cell - self.position;
+//         let local = match self.orientation {
+//             Orientation::Identity | Orientation::Rot0 => relative,
+//             // local -> world for Rot90 is (-y, x), so invert with (y, -x)
+//             Orientation::Rot90 => IVec2::new(relative.y, -relative.x),
+//             Orientation::Rot180 => IVec2::new(-relative.x, -relative.y),
+//             // local -> world for Rot270 is (y, -x), so invert with (-y, x)
+//             Orientation::Rot270 => IVec2::new(-relative.y, relative.x),
+//         };
 
-    pub fn transform(&self, cell_size: Vec2) -> Transform {
-        Transform {
-            translation: ((self.position.as_vec2() + self.orientation.offset()) * cell_size)
-                .extend(1.0),
-            rotation: self.orientation.into(),
-            ..Default::default()
-        }
-    }
-    pub fn ui_transform(&self, cell_size: Vec2) -> UiTransform {
-        let rot = self.orientation.ui_offset(self.size().as_vec2());
-        // 15, -15
-        let offset = (self.position.as_vec2() + rot) * cell_size;
-        UiTransform {
-            translation: Val2::new(Val::Px(offset.x), Val::Px(offset.y)),
-            rotation: self.orientation.into(),
-            ..Default::default()
-        }
-    }
+//         self.cells.contains(local)
+//     }
 
-    pub fn ocupies(&self, cell: IVec2) -> bool {
-        let relative = cell - self.position;
-        let local = match self.orientation {
-            Orientation::Identity | Orientation::Rot0 => relative,
-            // local -> world for Rot90 is (-y, x), so invert with (y, -x)
-            Orientation::Rot90 => IVec2::new(relative.y, -relative.x),
-            Orientation::Rot180 => IVec2::new(-relative.x, -relative.y),
-            // local -> world for Rot270 is (y, -x), so invert with (-y, x)
-            Orientation::Rot270 => IVec2::new(-relative.y, relative.x),
-        };
-
-        self.cells.contains(local)
-    }
-
-    pub fn size(&self) -> UVec2 {
-        self.cells.size()
-    }
-}
+//     pub fn size(&self) -> UVec2 {
+//         self.cells.size()
+//     }
+// }
 
 mod test;
 

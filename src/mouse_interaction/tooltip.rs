@@ -199,11 +199,12 @@ struct ItemToolTip {
 
 fn show_item_tooltip(
     event: On<ItemToolTip>,
-    items: Query<(&Item, &Shape, &SlotType, &RenderingItem)>,
+    items: Query<(&Item, &InInventory, &RenderingItem)>,
     descriptors: Res<Assets<ItemDescriptor>>,
     mut tooltip: ToolTip,
+    inventorys: Res<Assets<Inventory>>,
 ) {
-    let Ok((item, shape, slot_type, rendering_item)) = items.get(event.item) else {
+    let Ok((item, in_inventory, rendering_item)) = items.get(event.item) else {
         warn!(
             "ItemToolTip event for entity {:?} that does not have an Item component",
             event.item
@@ -291,7 +292,7 @@ fn show_item_tooltip(
                         ..Default::default()
                     },
                 ))
-                .with_children(|size| for (slot_type, shape) in descriptor.valid_sizes() {});
+                .with_children(|size| for (slot_type, layout) in descriptor.sizes() {});
                 dbg.spawn((
                     Text::new("Images:"),
                     Node {
@@ -303,8 +304,14 @@ fn show_item_tooltip(
                     for (slot_type, shape) in descriptor.valid_images() {}
                 });
                 dbg.spawn(
-                    Text::new(format!("Slot Type: {:?}", slot_type)),
+                    Text::new(format!("Slot Type: {:?}", in_inventory.1)),
                 );
+                let Some(inv_info) = inventorys.get(in_inventory.0) else {
+                    return;
+                };
+                let Some(shape) = inv_info.get_shape(event.item) else {
+                    return;
+                };
                 dbg.spawn(
                     Text::new(format!("Shape: {:#?}", shape)),
                 );

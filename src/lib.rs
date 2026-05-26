@@ -11,14 +11,14 @@ mod rendering;
 
 pub mod prelude {
     pub use crate::inventory::{
-        Cells, Entry, Inventory, Item, ItemDescriptor, Orientation, Shape, Slot,
-        SlotType, ItemInventory
+        Inventory, Item, ItemDescriptor, Orientation, Shape, Layout,
+        CellType, inventory_relationship::*,
     };
 
     pub use crate::inventory::manager::{AddFailed, InventoryCommands, InventoryManager};
 
     #[cfg(feature = "rendering")]
-    pub use crate::mouse_interaction::MouseInventoryPlugin;
+    // pub use crate::mouse_interaction::MouseInventoryPlugin;
     #[cfg(feature = "rendering")]
     pub use crate::mouse_interaction::{ToolTipPlugin, ToolTipSettings};
     #[cfg(feature = "rendering")]
@@ -40,7 +40,6 @@ impl Plugin for PolyventoryPlugin {
         app.init_asset::<inventory::InventoryDescriptor>();
         app.init_asset_loader::<inventory::ItemDescriptorLoader>();
         app.init_asset_loader::<inventory::InventoryDescriptorLoader>();
-        app.register_type::<inventory::InInventory>();
 
         app.register_type::<inventory::entry::Entry>();
     }

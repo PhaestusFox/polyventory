@@ -32,7 +32,7 @@ fn main() {
         ..Default::default()
     });
     app.add_plugins((
-        polyventory::prelude::MouseInventoryPlugin,
+        // polyventory::prelude::MouseInventoryPlugin,
         polyventory::prelude::ToolTipPlugin,
     ));
     app.init_resource::<LootTable>();
@@ -114,12 +114,11 @@ fn spawn_inventory(
     mut styles: ResMut<Assets<InventoryStyle>>,
     asset_server: Res<AssetServer>,
 ) {
-    let mut test_inventory = Inventory::new("Ui Inventory",5, 7);
-    test_inventory.add_slot(Slot {
-        slot_type: vec![SlotType::Untyped],
-        position: IVec2::new(0, 8),
-        size: UVec2::new(50, 20),
-        entries: vec![],
+    let mut test_inventory = Inventory::new("Ui Inventory");
+    test_inventory.add_slot(CellType::Untyped, Shape {
+        offset: IVec2::ZERO,
+        orientation: Orientation::Deg0,
+        layout: Layout::Rect { size: UVec2::new(30, 50) },
     });
     let s = &mut inventory_manager;
     let test_inventory_handle = s.create_inventory(test_inventory);
@@ -143,19 +142,19 @@ fn spawn_inventory(
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
         IVec2::new(1, 8),
-        Orientation::Identity,
+        Orientation::Deg0,
     );
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Rot270);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Deg270);
     info!("Spawning water bottle at 1,8 with 270 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Rot90);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Deg90);
     info!("Spawning water bottle at 3,9 with 90 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    for _ in 0..10 {
+    for _ in 0..15 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         match test_inventory.spawn_item(item) {
             Ok(_) => {},
