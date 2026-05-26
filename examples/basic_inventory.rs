@@ -97,7 +97,7 @@ fn spawn_inventory(
     mut inventory_manager: InventoryManager,
     loot: Res<LootTable>,
 ) {
-    let mut test_inventory = Inventory::new(5, 7);
+    let mut test_inventory = Inventory::new("Test Inventory", 5, 7);
     test_inventory.add_slot(Slot {
         slot_type: vec![SlotType::Untyped],
         position: IVec2::new(0, 8),

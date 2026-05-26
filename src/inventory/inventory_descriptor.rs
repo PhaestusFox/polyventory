@@ -13,6 +13,24 @@ pub struct InventoryDescriptor {
     slots: HashMap<SlotType, Shape>,
 }
 
+impl InventoryDescriptor {
+    pub fn create_inventory(&self) -> Inventory {
+        let mut inventory = Inventory::new_empty();
+        for (slot_type, shape) in &self.slots {
+            println!("adding inv slot: {:?}:{:?}", slot_type, shape);
+            inventory.add_slot(Slot {
+                slot_type: vec![slot_type.clone()],
+                position: shape.offset,
+                size: match shape.layout {
+                    Layout::Rect { size } => size,
+                },
+                entries: vec![],
+            });
+        }
+        inventory
+    }
+}
+
 impl FromStr for InventoryDescriptor {
     type Err = InventoryDescriptorParseError;
 

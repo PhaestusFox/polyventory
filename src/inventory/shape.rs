@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Reflect, Default)]
+#[derive(Reflect, Default, Debug)]
 pub struct Shape {
     pub offset: IVec2,
     pub orientation: Orientation,

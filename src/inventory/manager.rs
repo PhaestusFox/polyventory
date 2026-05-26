@@ -6,6 +6,8 @@ pub struct InventoryManager<'w, 's> {
     commands: Commands<'w, 's>,
     items: Query<'w, 's, &'static Item>,
     descriptors: Res<'w, Assets<ItemDescriptor>>,
+    inventory_descriptors: Res<'w, Assets<InventoryDescriptor>>,
+    asset_server: Res<'w, AssetServer>,
 }
 
 impl InventoryManager<'_, '_> {
@@ -20,6 +22,8 @@ impl InventoryManager<'_, '_> {
             current_inventory: current,
             items: self.items.reborrow(),
             descriptors: &self.descriptors,
+            inventory_descriptors: &self.inventory_descriptors,
+            ass: &self.asset_server,
         })
     }
 
@@ -42,6 +46,8 @@ pub struct InventoryCommands<'w, 's, 'a> {
     current_inventory: &'a mut Inventory,
     items: Query<'w, 's, &'static Item>,
     descriptors: &'a Assets<ItemDescriptor>,
+    inventory_descriptors: &'a Assets<InventoryDescriptor>,
+    ass: &'a AssetServer,
 }
 
 impl InventoryCommands<'_, '_, '_> {
@@ -120,8 +126,17 @@ impl InventoryCommands<'_, '_, '_> {
         // todo - clean up if failed to add to inventory
         let entity = self
             .commands
-            .spawn((Item::new(item), descriptor.spawn()))
-            .id();
+            .spawn((Item::new(item), descriptor.spawn())).id();
+        if let Some(sub_inventory) = descriptor.sub_inventory() {
+            let Some(inv_des) = self.inventory_descriptors.get(sub_inventory) else {
+                return Err(AddFailed::InventoryDescriptorNotFound(sub_inventory.clone()));
+            };
+            let mut inv = inv_des.create_inventory();
+            inv.name = format!("{}({:?}) Inventory", descriptor.name(), entity);
+            self.commands.entity(entity).insert(ItemInventory(self.ass.add(inv)));
+            warn!("Spawn sub inventory for {}", descriptor.name());
+        }
+
         match self.current_inventory.add_item(descriptor, entity) {
             Some((slot, shape, slot_type)) => {
                 info!(
@@ -204,6 +219,8 @@ pub enum AddFailed {
     EntityIsNotAnItem(Entity),
     #[error("ItemDescriptor {0:?} not found")]
     ItemDescriptorNotFound(Handle<ItemDescriptor>),
+    #[error("InventoryDescriptor {0:?} not found")]
+    InventoryDescriptorNotFound(Handle<InventoryDescriptor>),
     #[error("Failed to add item to inventory")]
     NotYetFullImplemented,
     #[error("This inventory does not have enough slots to fit: {} < {}", num_slots, slot_index + 1)]

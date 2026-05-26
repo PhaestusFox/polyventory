@@ -11,21 +11,23 @@ pub mod entry;
 pub use item::*;
 pub use slot::*;
 
-use crate::inventory::manager::AddFailed;
+use crate::{inventory::manager::AddFailed, mouse_interaction::Hand};
 
 mod inventory_descriptor;
 pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
 
 #[derive(Asset, Reflect)]
 pub struct Inventory {
+    name: String,
     slots: Vec<Slot>,
     items: Vec<entry::Entry>,
 }
 
 impl Inventory {
     /// Creates a new inventory with the specified width and height.
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(name: impl Into<String>, width: u32, height: u32) -> Self {
         Self {
+            name: name.into(),
             slots: vec![Slot {
                 slot_type: vec![SlotType::Untyped],
                 position: IVec2::ZERO,
@@ -37,12 +39,13 @@ impl Inventory {
     }
 
     pub fn new_empty() -> Self {
-        Self { slots: Vec::new(), items: Vec::new() }
+        Self { name: String::new(), slots: Vec::new(), items: Vec::new() }
     }
 
     /// Creates a new inventory with the specified width, height, and slots.
     pub fn new_with_slots(slots: impl Into<Vec<Slot>>) -> Self {
         Self {
+            name: String::new(),
             slots: slots.into(),
             items: Vec::new(),
         }
@@ -255,3 +258,7 @@ impl Inventory {
         })
     }
 }
+
+#[derive(Debug, Component)]
+#[component(immutable)]
+pub struct ItemInventory(pub Handle<Inventory>);

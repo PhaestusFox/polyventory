@@ -238,6 +238,7 @@ fn load_item_descriptor(
                     if line.ends_with('}') {
                         break;
                     }
+                    inv_data.push('\n');
                 }
                 let i = crate::inventory::inventory_descriptor::InventoryDescriptor::from_str(&inv_data)?;
                 sub_inventory = Some(ctx.add_labeled_asset(format!("{}.inventory", name), i));
