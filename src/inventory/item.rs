@@ -115,7 +115,7 @@ pub struct ItemDescriptorLoader;
 
 impl AssetLoader for ItemDescriptorLoader {
     fn extensions(&self) -> &[&str] {
-        &[".item"]
+        &["item"]
     }
 
     type Asset = ItemDescriptor;
@@ -133,9 +133,29 @@ impl AssetLoader for ItemDescriptorLoader {
         Output = std::prelude::v1::Result<Self::Asset, Self::Error>,
     > {
         async move {
+            println!("Loading item descriptor from");
             let mut data = String::new();
             reader.read_to_string(&mut data).await?;
-            load_item_descriptor(&data, load_context)
+            let Some((pre, post)) = data.split_once("[item]") else {
+                return load_item_descriptor(&data, load_context);
+            };
+            let (main, rest) = if pre.trim().is_empty() {
+                let mut parts = post.split("[item]");
+                let main = parts.next().unwrap_or("");
+                (main, parts)
+            } else {
+                (pre, post.split("[item]"))
+            };
+            let main: Result<ItemDescriptor, LoadItemDescriptorError> = load_item_descriptor(main, load_context);
+            for block in rest {
+                let mut l = load_context.begin_labeled_asset();
+                let new = load_item_descriptor(block, &mut l)?;
+                println!("Loaded item descriptor: {:?}", new);
+                let name = new.name.clone();
+                let asset = l.finish(new);
+                load_context.add_loaded_labeled_asset(name, asset);
+            }
+            main
         }
     }
 }
@@ -155,6 +175,9 @@ pub enum LoadItemDescriptorError {
     InvalidSize(&'static str, String),
     #[error("Missing Image path")]
     MissingImagePath,
+
+    #[error("Entity does not have an Item component")]
+    NoItemInDescriptor,
 }
 
 fn load_item_descriptor(
@@ -254,6 +277,7 @@ impl Mode {
             }
             Mode::Image => {
                 let (slot_type, (path, size)) = Self::parse_image(line)?;
+                println!("Loading image for slot type {:?} from path {}", slot_type, path);
                 let image_handle: Handle<Image> = ctx.load(path);
                 image.push((slot_type, (image_handle, size)));
                 Ok(())

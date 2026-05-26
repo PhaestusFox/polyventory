@@ -1,0 +1,30 @@
+[item]
+name: BackPack
+size:
+    Untyped: 12, 14
+image:
+    Untyped: bbg\icons\BackPack.png, 12, 14
+description:
+A Big BackPack
+
+[item]
+name: SmallPocket
+size:
+    backpackslot: 1, 1
+    Untyped: 5, 2
+image:
+    Untyped: bbg\icons\BackPack.png, 5, 2
+    backpackslot: bbg\ui\GUICell.png, 5, 2
+description:
+A Small BackPack Pocket
+
+[item]
+name: BigPocket
+size:
+    backpackslot: 1, 1
+    Untyped: 5, 7
+image:
+    Untyped: bbg\icons\BackPack.png, 5, 7
+    backpackslot: bbg\ui\GUICell.png, 5, 7
+description:
+A Big BackPack Pocket

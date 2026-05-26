@@ -1,6 +1,9 @@
-use bevy::{input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*};
+use std::path::Path;
+
+use bevy::{asset::AssetPath, input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use polyventory::prelude::*;
+use rand::seq::IndexedRandom;
 
 fn main() {
     let mut app = App::new();
@@ -73,6 +76,7 @@ enum Loaded {
 
 #[derive(Resource)]
 pub struct LootTable {
+    pockets: Vec<Handle<ItemDescriptor>>,
     items: Vec<Handle<ItemDescriptor>>,
 }
 
@@ -85,8 +89,17 @@ impl FromWorld for LootTable {
             asset_server.load("items/battery_phone.item"),
             asset_server.load("items/phone_on.item"),
             asset_server.load("items/phone_off.item"),
+            asset_server.load("items/backpack.item"),
+            asset_server.load("items/backpack.item"),
+            asset_server.load("items/backpack.item#SmallPocket"),
+            asset_server.load("items/backpack.item#SmallPocket"),
+            asset_server.load("items/backpack.item#BigPocket"),
         ];
-        Self { items }
+        let pockets = vec![
+            asset_server.load("items/backpack.item#SmallPocket"),
+            asset_server.load("items/backpack.item#BigPocket"),
+        ];
+        Self { items, pockets }
     }
 }
 
@@ -101,7 +114,7 @@ fn spawn_inventory(
     test_inventory.add_slot(Slot {
         slot_type: vec![SlotType::Untyped],
         position: IVec2::new(0, 8),
-        size: UVec2::new(5, 2),
+        size: UVec2::new(50, 20),
         entries: vec![],
     });
     let s = &mut inventory_manager;
@@ -131,13 +144,13 @@ fn spawn_inventory(
     info!("Spawning water bottle at 3,9 with 90 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    // for _ in 0..10 {
-    //     let item = loot.items.choose(&mut rng).expect("At least one item").clone();
-    //     match test_inventory.spawn_item(item) {
-    //         Ok(item) => info!("Spawned random item: {:?}", item),
-    //         Err(f) => error!("Failed to spawn random item: {:?}", f),
-    //     }
-    // }
+    for _ in 0..10 {
+        let item = loot.items.choose(&mut rng).expect("At least one item").clone();
+        match test_inventory.spawn_item(item) {
+            Ok(item) => info!("Spawned random item: {:?}", item),
+            Err(f) => error!("Failed to spawn random item: {:?}", f),
+        }
+    }
 
     // let inventory = inventorys.add(test_inventory);
     let style = InventoryStyle {
@@ -149,15 +162,16 @@ fn spawn_inventory(
     commands.spawn((
         RenderedInventory::new(test_inventory_handle.clone()),
         Name::new("Test Inventory Node"),
+        Node {
+            left: Val::Px(50.0),
+            top: Val::Px(50.0),
+            ..Default::default()
+        },
     ));
-    commands.spawn((Node {
-        margin: UiRect::all(Val::Auto),
-        left: Val::Px(200.0),
-        top: Val::Px(50.0),
-        ..Default::default()
-    },
+    commands.spawn((
     RenderedInventory::new(test_inventory_handle.clone()),
     InventoryNode,
-    Name::new("Test Inventory Node"), InventoryStyleHandle(style)));
+    Name::new("Test Inventory Node"),
+    InventoryStyleHandle(style)));
 
 }
