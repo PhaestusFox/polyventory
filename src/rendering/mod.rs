@@ -13,7 +13,7 @@ mod style;
 
 pub mod render_prelude {
     pub use super::InventoryRenderPlugin;
-    pub use super::render::{RenderedItem, SpawnInventory};
+    pub use super::render::{RenderedItem, SpawnInventory, RenderingItem};
     pub use super::style::*;
     pub use super::{RenderedInventory, RenderedSlot};
 

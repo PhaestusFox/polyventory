@@ -1,14 +1,15 @@
 use bevy::prelude::*;
 
-#[derive(Reflect)]
+#[derive(Reflect, Default)]
 pub struct Shape {
-    offset: IVec2,
-    orientation: Orientation,
-    layout: Layout,
+    pub offset: IVec2,
+    pub orientation: Orientation,
+    pub layout: Layout,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default)]
 pub enum Orientation {
+    #[default]
     Deg0,
     Deg90,
     Deg180,
@@ -18,6 +19,12 @@ pub enum Orientation {
 #[derive(Debug, Clone, PartialEq, Eq, Reflect)]
 pub enum Layout {
     Rect { size: UVec2 },
+}
+
+impl Default for Layout {
+    fn default() -> Self {
+        Layout::Rect { size: UVec2::ONE }
+    }
 }
 
 impl From<super::slot::Shape> for Shape {

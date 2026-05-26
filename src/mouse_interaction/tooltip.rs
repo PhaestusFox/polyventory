@@ -101,6 +101,7 @@ struct ToolTip<'w, 's> {
     settings: Res<'w, ToolTipSettings>,
     cursor: Single<'w, 's, &'static Window, With<PrimaryWindow>>,
     pointer: Local<'s, Option<Entity>>,
+    current: Local<'s, Option<Entity>>,
 }
 
 impl ToolTip<'_, '_> {
@@ -146,6 +147,11 @@ impl ToolTip<'_, '_> {
         } else {
             self.root()
         }
+    }
+
+    fn spawn(&mut self, components: impl Bundle) -> Entity {
+        let entity = self.commands.spawn((components, ChildOf(self.root()))).id();
+        entity
     }
 }
 
@@ -193,11 +199,11 @@ struct ItemToolTip {
 
 fn show_item_tooltip(
     event: On<ItemToolTip>,
-    items: Query<(&Item, &Shape, &SlotType)>,
+    items: Query<(&Item, &Shape, &SlotType, &RenderingItem)>,
     descriptors: Res<Assets<ItemDescriptor>>,
     mut tooltip: ToolTip,
 ) {
-    let Ok((item, shape, slot_type)) = items.get(event.item) else {
+    let Ok((item, shape, slot_type, rendering_item)) = items.get(event.item) else {
         warn!(
             "ItemToolTip event for entity {:?} that does not have an Item component",
             event.item
@@ -211,6 +217,15 @@ fn show_item_tooltip(
         );
         return;
     };
+
+    if let Some(old) = tooltip.current.replace(event.item) && let Ok((.., rendering_item)) = items.get(old) {
+        for item in rendering_item.iter() {
+            tooltip.commands.entity(item).insert(BackgroundColor(Color::WHITE.with_alpha(0.)));
+        }
+    }
+    for item in rendering_item.iter() {
+        tooltip.commands.entity(item).insert(BackgroundColor(Color::BLACK.lighter(0.5)));
+    }
 
     tooltip.clear();
     tooltip.open(event.position);
@@ -294,6 +309,21 @@ fn show_item_tooltip(
                     Text::new(format!("Shape: {:#?}", shape)),
                 );
             });
+        if let Some(inv) = descriptor.sub_inventory() {
+            let id = match inv.path() {
+                Some(path) => {
+                    format!("SubInv-Handle: {}", path)
+                }
+                None => match inv.id() {
+                    AssetId::Index { index, .. } => format!("SubInv-Index: {:?}", index),
+                    AssetId::Uuid { uuid } => format!("SubInv-Uuid: {}", uuid),
+                }
+            };
+            tooltip.commands.spawn((
+                Text::new(id),
+                ChildOf(tooltip.root()),)
+            );
+        }
     }
 }
 

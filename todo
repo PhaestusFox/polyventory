@@ -16,6 +16,7 @@
 -- Debug info
 [ ] show size based on slot
 [ ] show image based on slot
+[ ] make ToolTip not go off screen
 
 - Inventory
 [ ] Shader to render shape

@@ -1,7 +1,11 @@
+use std::str::FromStr;
+
 use bevy::{
     asset::{AssetLoader, AsyncReadExt},
     ecs::{lifecycle::HookContext, world::DeferredWorld},
 };
+
+use crate::inventory::inventory_descriptor::InventoryDescriptorParseError;
 
 use super::*;
 
@@ -52,6 +56,7 @@ pub struct ItemDescriptor {
     description: Option<String>,
     size: Vec<(SlotType, Shape)>,
     image: Vec<(SlotType, (Handle<Image>, UVec2))>,
+    sub_inventory: Option<Handle<InventoryDescriptor>>,
 }
 
 impl ItemDescriptor {
@@ -108,6 +113,9 @@ impl ItemDescriptor {
     pub fn is_moveable(&self) -> bool {
         true
     }
+    pub fn sub_inventory(&self) -> Option<&Handle<InventoryDescriptor>> {
+        self.sub_inventory.as_ref()
+    }
 }
 
 #[derive(TypePath, Default)]
@@ -133,7 +141,6 @@ impl AssetLoader for ItemDescriptorLoader {
         Output = std::prelude::v1::Result<Self::Asset, Self::Error>,
     > {
         async move {
-            println!("Loading item descriptor from");
             let mut data = String::new();
             reader.read_to_string(&mut data).await?;
             let Some((pre, post)) = data.split_once("[item]") else {
@@ -150,7 +157,6 @@ impl AssetLoader for ItemDescriptorLoader {
             for block in rest {
                 let mut l = load_context.begin_labeled_asset();
                 let new = load_item_descriptor(block, &mut l)?;
-                println!("Loaded item descriptor: {:?}", new);
                 let name = new.name.clone();
                 let asset = l.finish(new);
                 load_context.add_loaded_labeled_asset(name, asset);
@@ -178,6 +184,9 @@ pub enum LoadItemDescriptorError {
 
     #[error("Entity does not have an Item component")]
     NoItemInDescriptor,
+
+    #[error("Failed to parse item inventory descriptor {0}")]
+    ParseInventoryDescriptorError(#[from] InventoryDescriptorParseError),
 }
 
 fn load_item_descriptor(
@@ -189,7 +198,9 @@ fn load_item_descriptor(
     let mut name = String::new();
     let mut mode = Mode::Name;
     let mut description: Option<String> = None;
-    for line in data.lines() {
+    let mut sub_inventory: Option<Handle<InventoryDescriptor>> = None;
+    let mut lines = data.lines().peekable();
+    while let Some(line) = lines.next() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('[') {
             continue;
@@ -206,6 +217,31 @@ fn load_item_descriptor(
                     description = Some(line.to_string());
                 }
             }
+            Mode::Inventory => {
+                let Some((_, path)) = line.split_once(':') else {
+                    warn!("Inventory line start does not contain ':'");
+                    continue;
+                };
+                let path = path.trim();
+                if !path.is_empty() {
+                    if sub_inventory.is_some() {
+                        warn!("Multiple inventory blocks found in item descriptor, only the first one will be used");
+                        continue;
+                    }
+                    sub_inventory = Some(ctx.load(path.to_string()));
+                    continue;
+                }
+                let mut inv_data = String::new();
+                while let Some(line) = lines.next() {
+                    let line = line.trim();
+                    inv_data.push_str(line);
+                    if line.ends_with('}') {
+                        break;
+                    }
+                }
+                let i = crate::inventory::inventory_descriptor::InventoryDescriptor::from_str(&inv_data)?;
+                sub_inventory = Some(ctx.add_labeled_asset(format!("{}.inventory", name), i));
+            }
             _ => {
                 mode.parse_line(line, &mut name, &mut size, &mut image, ctx)?;
             }
@@ -217,6 +253,7 @@ fn load_item_descriptor(
         description,
         size,
         image,
+        sub_inventory,
     };
 
     Ok(item)
@@ -236,16 +273,21 @@ fn set_mode(line: &str, mode: &mut Mode) -> bool {
     } else if line.starts_with("description") {
         *mode = Mode::Description;
         return true;
-    } else {
+    } else if line.starts_with("inventory") {
+        *mode = Mode::Inventory;
+        return false;
+    } else  {
         return false;
     }
 }
 
+#[derive(Debug)]
 enum Mode {
     Size,
     Image,
     Name,
     Description,
+    Inventory,
 }
 
 impl Mode {
@@ -277,13 +319,12 @@ impl Mode {
             }
             Mode::Image => {
                 let (slot_type, (path, size)) = Self::parse_image(line)?;
-                println!("Loading image for slot type {:?} from path {}", slot_type, path);
                 let image_handle: Handle<Image> = ctx.load(path);
                 image.push((slot_type, (image_handle, size)));
                 Ok(())
             }
-            Mode::Description => {
-                error!("Description should never make it here");
+            _ => {
+                error!("{:?} should never make it here", self);
                 Ok(())
             }
         }

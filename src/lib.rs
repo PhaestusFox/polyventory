@@ -37,7 +37,9 @@ impl Plugin for PolyventoryPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<inventory::Inventory>();
         app.init_asset::<inventory::ItemDescriptor>();
+        app.init_asset::<inventory::InventoryDescriptor>();
         app.init_asset_loader::<inventory::ItemDescriptorLoader>();
+        app.init_asset_loader::<inventory::InventoryDescriptorLoader>();
 
         app.register_type::<inventory::entry::Entry>();
     }

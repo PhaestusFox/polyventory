@@ -1,7 +1,6 @@
 use std::{borrow::Cow, convert::Infallible, str::FromStr};
 
 use bevy::{
-    ecs::{lifecycle::HookContext, relationship::Relationship, world::DeferredWorld},
     math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
 };
 
@@ -9,7 +8,7 @@ use crate::inventory::slot::shape_iters::OrientationIter;
 
 use super::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Component)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Component, Reflect)]
 pub enum SlotType {
     Untyped,
     WaterTight,

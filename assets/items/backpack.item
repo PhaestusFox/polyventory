@@ -6,6 +6,7 @@ image:
     Untyped: bbg\icons\BackPack.png, 12, 14
 description:
 A Big BackPack
+inventory: inventorys\backpack.inventory
 
 [item]
 name: SmallPocket
@@ -17,6 +18,12 @@ image:
     backpackslot: bbg\ui\GUICell.png, 5, 2
 description:
 A Small BackPack Pocket
+inventory:
+{
+    type: Untyped
+    w: 5
+    h: 2
+}
 
 [item]
 name: BigPocket
@@ -28,3 +35,9 @@ image:
     backpackslot: bbg\ui\GUICell.png, 5, 7
 description:
 A Big BackPack Pocket
+inventory:
+{
+    type: Untyped
+    w: 5
+    h: 7
+}

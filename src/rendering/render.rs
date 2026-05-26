@@ -1,6 +1,7 @@
+use std::ops::DerefMut;
+
 use bevy::{
-    image::{ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
-    sprite::Anchor, ui,
+    image::{ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor}, platform::collections::HashMap, sprite::Anchor, ui
 };
 
 use super::*;
@@ -142,4 +143,9 @@ pub(super) fn update_displayed_item_transform(
         new_transform.translation.z = 1.;
         *transform = new_transform;
     }
+}
+
+fn something(
+    item: &[Entity]
+) {
 }

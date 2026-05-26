@@ -13,6 +13,9 @@ pub use slot::*;
 
 use crate::inventory::manager::AddFailed;
 
+mod inventory_descriptor;
+pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
+
 #[derive(Asset, Reflect)]
 pub struct Inventory {
     slots: Vec<Slot>,

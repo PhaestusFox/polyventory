@@ -15,11 +15,11 @@ fn main() {
         filter: filter,
         ..Default::default()
     }));
-    app.add_plugins(EguiPlugin::default());
-    app.add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+    app.add_plugins(EguiPlugin::default())
+    .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
 
-    app.add_plugins(polyventory::PolyventoryPlugin);
-    app.add_plugins(polyventory::InventoryRenderPlugin {
+    app.add_plugins(polyventory::PolyventoryPlugin)
+    .add_plugins(polyventory::InventoryRenderPlugin {
         default_inventory_style: Some(polyventory::prelude::InventoryStyleAsset {
             cell_size: Vec2::new(10.0, 10.0),
             cell_icon: Some("bbg/ui/GUICell.png".to_string()),
@@ -41,6 +41,7 @@ fn main() {
     app.init_state::<Loaded>();
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
     app.add_plugins(bevy_inspector_egui::quick::AssetInspectorPlugin::<polyventory::prelude::Inventory>::default());
+    
     app.run();
 }
 
@@ -147,7 +148,7 @@ fn spawn_inventory(
     for _ in 0..10 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         match test_inventory.spawn_item(item) {
-            Ok(item) => info!("Spawned random item: {:?}", item),
+            Ok(item) => {},
             Err(f) => error!("Failed to spawn random item: {:?}", f),
         }
     }
