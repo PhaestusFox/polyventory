@@ -5,14 +5,18 @@ pub mod manager;
 mod slot;
 mod traits;
 
+mod shape;
+pub mod entry;
+
 pub use item::*;
 pub use slot::*;
 
 use crate::inventory::manager::AddFailed;
 
-#[derive(Asset, TypePath)]
+#[derive(Asset, Reflect)]
 pub struct Inventory {
     slots: Vec<Slot>,
+    items: Vec<entry::Entry>,
 }
 
 impl Inventory {
@@ -25,17 +29,19 @@ impl Inventory {
                 size: UVec2::new(width, height),
                 entries: vec![],
             }],
+            items: vec![],
         }
     }
 
     pub fn new_empty() -> Self {
-        Self { slots: Vec::new() }
+        Self { slots: Vec::new(), items: Vec::new() }
     }
 
     /// Creates a new inventory with the specified width, height, and slots.
     pub fn new_with_slots(slots: impl Into<Vec<Slot>>) -> Self {
         Self {
             slots: slots.into(),
+            items: Vec::new(),
         }
     }
 
@@ -55,12 +61,17 @@ impl Inventory {
                 // todo find fist empty space that can fit the item
                 if let Some(shape) = slot.fit(&shape) {
                     info!("Added {} to inventory: {:?}", item_type.name(), shape);
-                    let entry = Entry {
+                    let new_entry = Entry {
                         entity,
                         shape: shape.clone(),
                     };
                     let slot_type = slot_type.clone();
-                    slot.add_entry(entry);
+                    slot.add_entry(new_entry);
+                    self.items.push(entry::Entry {
+                        entity,
+                        shape: shape.clone().into(),
+                        sub_inventory: None,
+                    });
                     return Some((i, shape, slot_type));
                 }
             }
@@ -91,6 +102,11 @@ impl Inventory {
                         slot.add_entry(Entry {
                             entity,
                             shape: shape.clone(),
+                        });
+                        self.items.push(entry::Entry {
+                            entity,
+                            shape: shape.clone().into(),
+                            sub_inventory: None,
                         });
                         trace!(
                             "Added {} to inventory at position {:?} with orientation {:?}",

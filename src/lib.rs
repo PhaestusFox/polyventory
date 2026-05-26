@@ -38,6 +38,8 @@ impl Plugin for PolyventoryPlugin {
         app.init_asset::<inventory::Inventory>();
         app.init_asset::<inventory::ItemDescriptor>();
         app.init_asset_loader::<inventory::ItemDescriptorLoader>();
+
+        app.register_type::<inventory::entry::Entry>();
     }
 }
 

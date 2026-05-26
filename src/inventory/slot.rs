@@ -43,10 +43,13 @@ impl PartialEq<Entity> for Entry {
     }
 }
 
+#[derive(Clone, Reflect, Component)]
 pub struct Slot {
+    #[reflect(ignore)]
     pub slot_type: Vec<SlotType>,
     pub position: IVec2,
     pub size: UVec2,
+    #[reflect(ignore)]
     pub entries: Vec<Entry>,
 }
 

@@ -37,6 +37,7 @@ fn main() {
     app.add_systems(OnExit(Loaded::False), spawn_inventory);
     app.init_state::<Loaded>();
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
+    app.add_plugins(bevy_inspector_egui::quick::AssetInspectorPlugin::<polyventory::prelude::Inventory>::default());
     app.run();
 }
 
