@@ -29,7 +29,7 @@ impl FromStr for SlotType {
     }
 }
 
-#[derive(Clone, Deref)]
+#[derive(Clone, Deref, Debug)]
 pub struct Entry {
     pub entity: Entity, // todo: Move this a layer up? have shape, position, rotation as a sub structure?
     #[deref]

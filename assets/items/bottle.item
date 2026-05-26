@@ -3,3 +3,9 @@ size:
     Untyped: 1, 4
 image:
     Untyped: bbg\icons\ItmBottle.png, 1, 4
+inventory:
+{
+    type: WaterTight,
+    w: 2
+    h: 3
+}

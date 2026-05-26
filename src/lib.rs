@@ -12,7 +12,7 @@ mod rendering;
 pub mod prelude {
     pub use crate::inventory::{
         Cells, Entry, Inventory, Item, ItemDescriptor, Orientation, Shape, Slot,
-        SlotType,
+        SlotType, ItemInventory
     };
 
     pub use crate::inventory::manager::{AddFailed, InventoryCommands, InventoryManager};
@@ -40,6 +40,7 @@ impl Plugin for PolyventoryPlugin {
         app.init_asset::<inventory::InventoryDescriptor>();
         app.init_asset_loader::<inventory::ItemDescriptorLoader>();
         app.init_asset_loader::<inventory::InventoryDescriptorLoader>();
+        app.register_type::<inventory::InInventory>();
 
         app.register_type::<inventory::entry::Entry>();
     }

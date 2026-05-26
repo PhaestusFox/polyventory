@@ -30,7 +30,8 @@ pub fn try_pickup(
         warn!("Item entity {:?} is not in any inventory", to.0);
         return;
     };
-    let Some(mut inventory) = inventory_manager.open_inventory(inventory_id) else {
+    let s = inventory_manager.get_strong(inventory_id).unwrap();
+    let Some(mut inventory) = inventory_manager.open_inventory(&s) else {
         warn!("Inventory asset for item entity {:?} not found", to.0);
         return;
     };
@@ -39,7 +40,7 @@ pub fn try_pickup(
         return;
     };
     cursor.hold(to.0, InventoryHandle {
-        inventory: inventory_id,
+        inventory: s.id(),
         slot_index: slot,
     });
     commands.entity(to.0).despawn_related::<RenderingItem>();

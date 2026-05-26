@@ -57,7 +57,7 @@ fn detect_drop(
     };
     let clicked_in = (pos * slot.size.as_vec2()).as_ivec2() + slot.position;
     commands.trigger(DropItem {
-        inventory: inventory_id.into(),
+        inventory: inventory_id.id(),
         pos: clicked_in,
     });
     println!("Clicked on inventory entity {:?} at position {:?} to drop item", click.entity, clicked_in);

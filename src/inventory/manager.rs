@@ -7,7 +7,6 @@ pub struct InventoryManager<'w, 's> {
     items: Query<'w, 's, &'static Item>,
     descriptors: Res<'w, Assets<ItemDescriptor>>,
     inventory_descriptors: Res<'w, Assets<InventoryDescriptor>>,
-    asset_server: Res<'w, AssetServer>,
 }
 
 impl InventoryManager<'_, '_> {
@@ -15,15 +14,16 @@ impl InventoryManager<'_, '_> {
         &mut self,
         inventory: impl Into<AssetId<Inventory>>,
     ) -> Option<InventoryCommands<'_, '_, '_>> {
-        let current = self.inventory_assets.get_mut(inventory)?;
-
+        let id = inventory.into();
+        let current = self.inventory_assets.remove_untracked(id)?;
         Some(InventoryCommands {
             commands: self.commands.reborrow(),
             current_inventory: current,
+            inv_id: id,
             items: self.items.reborrow(),
             descriptors: &self.descriptors,
             inventory_descriptors: &self.inventory_descriptors,
-            ass: &self.asset_server,
+            all_inventories: &mut self.inventory_assets,
         })
     }
 
@@ -39,15 +39,27 @@ impl InventoryManager<'_, '_> {
         }
         None
     }
+
+    pub fn get_strong(&mut self, id: AssetId<Inventory>) -> Option<Handle<Inventory>> {
+        self.inventory_assets.get_strong_handle(id)
+    }
 }
 
 pub struct InventoryCommands<'w, 's, 'a> {
-    commands: Commands<'w, 's>,
-    current_inventory: &'a mut Inventory,
+    pub commands: Commands<'w, 's>,
+    current_inventory: Inventory,
+    inv_id: AssetId<Inventory>,
     items: Query<'w, 's, &'static Item>,
     descriptors: &'a Assets<ItemDescriptor>,
     inventory_descriptors: &'a Assets<InventoryDescriptor>,
-    ass: &'a AssetServer,
+    all_inventories: &'a mut Assets<Inventory>,
+}
+
+impl Drop for InventoryCommands<'_, '_, '_> {
+    fn drop(&mut self) {
+        let i = core::mem::take(&mut self.current_inventory);
+        _ = self.all_inventories.insert(self.inv_id, i).unwrap();
+    }
 }
 
 impl InventoryCommands<'_, '_, '_> {
@@ -123,17 +135,19 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
         };
+        // self.all_inventories.get_handle_provider().
         // todo - clean up if failed to add to inventory
         let entity = self
             .commands
-            .spawn((Item::new(item), descriptor.spawn())).id();
+            .spawn((Item::new(item), descriptor.spawn(), InInventory(self.inv_id))).id();
         if let Some(sub_inventory) = descriptor.sub_inventory() {
             let Some(inv_des) = self.inventory_descriptors.get(sub_inventory) else {
                 return Err(AddFailed::InventoryDescriptorNotFound(sub_inventory.clone()));
             };
             let mut inv = inv_des.create_inventory();
             inv.name = format!("{}({:?}) Inventory", descriptor.name(), entity);
-            self.commands.entity(entity).insert(ItemInventory(self.ass.add(inv)));
+            let inv_h = self.all_inventories.add(inv);
+            self.commands.entity(entity).insert(ItemInventory(inv_h));
             warn!("Spawn sub inventory for {}", descriptor.name());
         }
 
@@ -203,13 +217,13 @@ impl core::ops::Deref for InventoryCommands<'_, '_, '_> {
     type Target = Inventory;
 
     fn deref(&self) -> &Self::Target {
-        self.current_inventory
+        &self.current_inventory
     }
 }
 
 impl core::ops::DerefMut for InventoryCommands<'_, '_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.current_inventory
+        &mut self.current_inventory
     }
 }
 

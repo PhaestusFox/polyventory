@@ -42,6 +42,9 @@ fn main() {
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
     app.add_plugins(bevy_inspector_egui::quick::AssetInspectorPlugin::<polyventory::prelude::Inventory>::default());
     
+
+    app.add_systems(Update, kill);
+    app.add_systems(Update, detect_drop);
     app.run();
 }
 
@@ -124,8 +127,15 @@ fn spawn_inventory(
         .open_inventory(&test_inventory_handle)
         .expect("Just created Inventory");
     let empty_bottle = loot.items[0].clone();
-    let r = test_inventory.spawn_item(empty_bottle);
-    info!("Spawning empty bottle: {:?}", r);
+    let bottle = match test_inventory.spawn_item(empty_bottle) {
+        Ok(item) => item,
+        Err(f) => {
+            error!("Failed to spawn empty bottle: {:?}", f);
+            return;
+        }
+    };
+    _ = dbg!(test_inventory.remove_item(bottle));
+    test_inventory.commands.entity(bottle).insert(Kill);
     let phone = loot.items[3].clone();
     let r = test_inventory.spawn_item(phone);
     info!("Spawning phone: {:?}", r);
@@ -148,12 +158,16 @@ fn spawn_inventory(
     for _ in 0..10 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         match test_inventory.spawn_item(item) {
-            Ok(item) => {},
+            Ok(_) => {},
             Err(f) => error!("Failed to spawn random item: {:?}", f),
         }
     }
 
-    // let inventory = inventorys.add(test_inventory);
+    commands.spawn((
+        Name::new("Player"),
+        polyventory::prelude::ItemInventory(test_inventory_handle.clone()),
+    ));
+
     let style = InventoryStyle {
         cell_size: Vec2::new(30.0, 30.0),
         cell_icon: asset_server.load("bbg/ui/GUICell.png"),
@@ -174,5 +188,24 @@ fn spawn_inventory(
     InventoryNode,
     Name::new("Test Inventory Node"),
     InventoryStyleHandle(style)));
+}
 
+#[derive(Component)]
+pub struct Kill;
+
+fn kill(mut commands: Commands, items: Populated<Entity, With<Kill>>) {
+    for item in &items {
+        commands.entity(item).despawn();
+    }
+}
+
+fn detect_drop(
+    mut messages: MessageReader<AssetEvent<Inventory>>,
+) {
+    for message in messages.read() {
+        match message {
+            AssetEvent::Modified { .. } => {},
+            other => info!("Received inventory asset event: {:?}", other),
+        }
+    }
 }

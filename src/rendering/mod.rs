@@ -57,9 +57,10 @@ impl Plugin for InventoryRenderPlugin {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Deref)]
 #[relationship_target(relationship = RenderedSlot)]
 pub struct RenderedInventory {
+    #[deref]
     inventory: Handle<Inventory>,
     #[relationship]
     slots: Vec<Entity>,

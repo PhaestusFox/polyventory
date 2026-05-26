@@ -16,7 +16,7 @@ use crate::{inventory::manager::AddFailed, mouse_interaction::Hand};
 mod inventory_descriptor;
 pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
 
-#[derive(Asset, Reflect)]
+#[derive(Asset, Reflect, Default)]
 pub struct Inventory {
     name: String,
     slots: Vec<Slot>,
@@ -261,4 +261,10 @@ impl Inventory {
 
 #[derive(Debug, Component)]
 #[component(immutable)]
+/// an items sub inventory
 pub struct ItemInventory(pub Handle<Inventory>);
+
+#[derive(Debug, Component, Reflect)]
+#[component(immutable)]
+/// the inventory this item is in
+pub struct InInventory(pub AssetId<Inventory>);
