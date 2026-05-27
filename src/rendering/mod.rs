@@ -85,13 +85,7 @@ impl Into<AssetId<Inventory>> for &RenderedInventory {
 pub struct RenderedSlot {
     #[relationship]
     pub(crate) inventory: Entity,
-    pub(crate) index: usize,
-}
-
-impl RenderedSlot {
-    pub fn index(&self) -> usize {
-        self.index
-    }
+    pub(crate) slot: CellType,
 }
 
 #[derive(Default)]

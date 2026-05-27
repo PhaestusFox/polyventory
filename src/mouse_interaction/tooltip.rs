@@ -48,6 +48,7 @@ fn spawn_tooltip(mut commands: Commands) {
         },
         FocusPolicy::Pass,
         ToolTipRoot,
+        GlobalZIndex(1),
         ThemeBackgroundColor(feathers::tokens::WINDOW_BG),
     ));
 }
@@ -313,7 +314,7 @@ fn show_item_tooltip(
                     return;
                 };
                 dbg.spawn(
-                    Text::new(format!("Shape: {:#?}", shape)),
+                    Text::new(format!("{}", shape)),
                 );
             });
         if let Some(inv) = descriptor.sub_inventory() {

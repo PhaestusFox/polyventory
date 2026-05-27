@@ -7,6 +7,12 @@ pub struct Shape {
     pub layout: Layout,
 }
 
+impl std::fmt::Display for Shape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Shape {{ offset: x:{}, y:{}, orientation: {:?}, layout: {} }}", self.offset.x, self.offset.y, self.orientation, self.layout)
+    }
+}
+
 impl Shape {
     pub fn size(&self) -> UVec2 {
         self.layout.size()
@@ -65,6 +71,14 @@ impl Layout {
         LayoutIter {
             layout: self.clone(),
             current: IVec2::ZERO,
+        }
+    }
+}
+
+impl std::fmt::Display for Layout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Layout::Rect { size } => write!(f, "Rect {{ Width :{}, Height :{} }}", size.x, size.y),
         }
     }
 }

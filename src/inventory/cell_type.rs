@@ -2,8 +2,9 @@ use std::{convert::Infallible, str::FromStr, sync::Arc};
 
 use bevy::prelude::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Component, Reflect)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Component, Reflect, Default)]
 pub enum CellType {
+    #[default]
     Untyped,
     WaterTight,
     Small,

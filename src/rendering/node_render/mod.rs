@@ -11,7 +11,7 @@ impl Plugin for InventoryNodePlugin {
         if self.auto_require {
             app.register_required_components::<RenderedInventory, InventoryNode>();
         }
-        app.add_systems(PreUpdate, (spawn_inventory_window, update_image_cell_scale, item_node::update_item_node_image));
+        app.add_systems(PreUpdate, (spawn_inventory_window, slot_node::update_image_cell_scale, item_node::update_item_node_image));
     }
 }
 
@@ -61,6 +61,10 @@ fn spawn_inventory_window(
                 },
                 ChildOf(entity),
                 ZIndex(-1),
+                RenderedSlot {
+                    inventory: entity,
+                    slot: slot_type.clone(),
+                }
             ));
         }
         for (item, shape) in inventory.items() {
@@ -78,60 +82,5 @@ fn spawn_inventory_window(
                 ChildOf(entity),
             ));
         }
-        // commands.spawn((
-        //     SlotNode,
-        //     RenderedSlot { index: i, inventory: entity },
-        //     Node {
-        //         position_type: PositionType::Absolute,
-        //         width: Val::Px(slot.size.x as f32 * style.cell_size.x),
-        //         height: Val::Px(slot.size.y as f32 * style.cell_size.y),
-        //         top: Val::Px(slot.position.y as f32 * style.cell_size.y),
-        //         left: Val::Px(slot.position.x as f32 * style.cell_size.x),
-        //         ..Default::default()
-        //     },
-        //     ImageNode {
-        //         image: style.cell_icon.clone(),
-        //         image_mode: NodeImageMode::Tiled { tile_x: true, tile_y: true, stretch_value: 1.0 },
-        //         ..Default::default()
-        //     },
-        //     ChildOf(entity),
-        //     Name::new(format!("Slot {}", i)),
-        // )).with_children(|root| {
-        //     for entry in &slot.entries {
-        //         let size = entry.shape.size().as_vec2() * style.cell_size;
-        //         root.spawn((
-        //             ItemNode(entity),
-        //             RenderedItem {
-        //                 item: entry.entity,
-        //             },
-        //             Node {
-        //                 width: Val::Px(size.x),
-        //                 height: Val::Px(size.y),
-        //                 ..Default::default()
-        //             },
-        //         ));
-        //     }
-        // });
-    }
-}
-
-fn update_image_cell_scale(
-    mut images: Populated<(&mut ImageNode, &RenderedSlot), Added<RenderedSlot>>,
-    styles: InventoryStyler,
-    image_assets: Res<Assets<Image>>,
-) {
-    for (mut image, slot) in &mut images {
-        let style = styles.style(slot.inventory);
-        let Some(image_asset) = image_assets.get(&image.image) else {
-            warn!("Failed to get Image asset for image handle {:?}", image.image);
-            continue;
-        };
-        let NodeImageMode::Tiled { stretch_value, .. } = &mut image.image_mode else {
-            continue;
-        };
-        let size = image_asset.size();
-        let scale = style.cell_size / size.as_vec2();
-        let s = scale.x.min(scale.y);
-        *stretch_value = s;
     }
 }
