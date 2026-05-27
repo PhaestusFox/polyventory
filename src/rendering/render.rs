@@ -15,7 +15,7 @@ pub struct RenderedItem {
     pub item: Entity,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
 #[relationship_target(relationship = RenderedItem)]
 pub struct RenderingItem(Vec<Entity>);
 

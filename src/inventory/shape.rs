@@ -37,6 +37,15 @@ impl Shape {
     pub fn can_fit(&self, other: &Shape) -> bool {
         other.bounds() < self.bounds()
     }
+
+    pub fn rotation(&self) -> Rot2 {
+        match self.orientation {
+            Orientation::Deg0 => Rot2::IDENTITY,
+            Orientation::Deg90 => Rot2::degrees(90.0),
+            Orientation::Deg180 => Rot2::degrees(180.0),
+            Orientation::Deg270 => Rot2::degrees(270.0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default, strum_macros::EnumIter)]

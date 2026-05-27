@@ -42,6 +42,8 @@ impl Plugin for PolyventoryPlugin {
         app.init_asset_loader::<inventory::InventoryDescriptorLoader>();
 
         app.register_type::<inventory::entry::Entry>();
+        app.register_type::<crate::rendering::render_prelude::RenderedItem>();
+        app.register_type::<crate::rendering::render_prelude::RenderingItem>();
     }
 }
 

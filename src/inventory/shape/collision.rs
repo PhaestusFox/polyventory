@@ -8,8 +8,8 @@ pub struct AabbBox {
 }
 
 impl AabbBox {
-    pub fn size(&self) -> Vec2 {
-        (self.max - self.min).as_vec2() + Vec2::ONE
+    pub fn size(&self) -> UVec2 {
+        (self.max - self.min).as_uvec2() + UVec2::ONE
     }
 }
 
@@ -80,8 +80,9 @@ impl core::cmp::PartialOrd for AabbBox {
         self.min.y >= other.min.y && self.max.y <= other.max.y && self.min.x >= other.min.x && self.max.x <= other.max.x
     }
     // self is within or colliding with other
-    fn le(&self, other: &Self) -> bool {        
-        // selfs bottom edge is within other height
+    fn le(&self, other: &Self) -> bool {
+        other < self ||
+        (// selfs bottom edge is within other height
         self.min.y >= other.min.y && self.min.y <= other.max.y
         &&
         // self's bottom edge is within or wider than other's width
@@ -103,7 +104,7 @@ impl core::cmp::PartialOrd for AabbBox {
         self.max.x >= other.min.x && self.max.x <= other.max.x
         &&
         // self's right edge is within or taller than other's height
-        self.min.y <= other.max.y && self.max.y >= other.min.y
+        self.min.y <= other.max.y && self.max.y >= other.min.y)
     }
     // self is colliding with other but not completely inside or outside
     fn ge(&self, other: &Self) -> bool {
@@ -249,4 +250,20 @@ fn collision_test() {
     assert_fl!(box0 <= box2);
     assert_fl!(box0 <= box3);
     assert_fl!(box0 <= box4);
+
+}
+
+#[test]
+// this was a legit situation that passed and should fail
+fn water_then_backpack() {
+    let water = AabbBox {
+        min: IVec2::new(0, 0),
+        max: IVec2::new(0, 3),
+    } * Orientation::Deg90 + IVec2::new(3, 9);
+    let backpack = AabbBox {
+        min: IVec2::new(0, 0),
+        max: IVec2::new(12, 14),
+    } + IVec2::new(2, 0);
+
+    assert!(backpack <= water)
 }
