@@ -1,4 +1,4 @@
-use bevy::{ecs::{entity::EntityHashMap, system::SystemParam}, math::bounding::Aabb2d, platform::collections::HashMap, prelude::*};
+use bevy::{ecs::{entity::EntityHashMap, system::SystemParam}, math::bounding::Aabb2d, platform::collections::{HashMap, HashSet}, prelude::*};
 
 mod item;
 pub mod manager;
@@ -115,6 +115,7 @@ impl Inventory {
                 for cell in slot_layout.iter_cells() {
                     shape.offset = cell;
                     if self.can_fit(slot_type, &shape) {
+                        println!("Found fit for {} in inventory: {:?}", item_type.name(), shape);
                         return Some((slot_type.clone(), shape));
                     }
                 }
@@ -123,7 +124,28 @@ impl Inventory {
         None
     }
 
-    pub fn can_fit(&self, cell_type: &CellType, shape: &shape::Shape) -> bool {
+    pub fn can_fit(&self, cell_type: &CellType, item_shape: &shape::Shape) -> bool {
+        // incompatible slot type
+        let Some(slot_shape) = self.slots.get(cell_type) else {
+            return false;
+        };
+        if !slot_shape.can_fit(item_shape) {
+            return false;
+        }
+        let item_bounds = item_shape.bounds();
+        for item in self.items.values() {
+            let used_bounds = item.shape.bounds();
+            // if the item bounds don't intersect with the new item bounds, we can skip detailed checking
+            if item_bounds <= used_bounds {
+                return false;
+            }
+            // TODO invert if to skip items we are not in bounds of and then check if we overlap with the item
+            // for cell in item_bounds.min(used_bounds).iter() {
+            //     if item.shape.contains(cell) && item_shape.contains(cell) {
+            //         return false;
+            //     }
+            // }
+        }
         true
     }
 
@@ -146,6 +168,34 @@ impl Inventory {
     pub fn get_shape(&self, item: Entity) -> Option<&shape::Shape> {
         self.items.get(&item).map(|entry| &entry.shape)
     }
+
+    pub fn find(&self, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<FoundItem> {
+        if self.contains(item) {
+            return Some(FoundItem::InSelf);
+        }
+        for entry in self.iter_sub_inventories() {
+            if checked.contains(&entry) {
+                error!("Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.", entry, item);
+                continue;
+            }
+            checked.insert(entry);
+            let Some(inventory) = assets.get(entry) else {
+                warn!("Failed to get inventory {:?} while trying to find item {:?}. Skipping.", entry, item);
+                continue;
+            };
+            match inventory.find(item, assets, checked) {
+                Some(FoundItem::InSelf) => return Some(FoundItem::InSubInventory(entry)),
+                Some(FoundItem::InSubInventory(sub)) => return Some(FoundItem::InSubInventory(sub)),
+                None => continue,
+            }
+        }
+        None
+    }
+}
+
+pub enum FoundItem {
+    InSelf,
+    InSubInventory(AssetId<Inventory>),
 }
 
 pub(crate) mod inventory_relationship;

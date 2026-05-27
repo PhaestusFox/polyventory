@@ -180,7 +180,21 @@ impl InventoryCommands<'_, '_, '_> {
     /// Returns the inventory the item was removed from
     pub fn remove_item(&mut self, item: Entity) -> Result<AssetId<Inventory>, RemoveFailed> {
         let mut checked = HashSet::new();
-        Self::find(self.inv_id, item, &self.all_inventories, &mut checked).ok_or(RemoveFailed::ItemNotFound(item))
+        match self.current_inventory.find(item, &self.all_inventories, &mut checked) {
+            Some(FoundItem::InSelf) => {
+                self.current_inventory.remove(item).ok_or(RemoveFailed::FailedToRemove)?;
+                Ok(self.inv_id)
+            },
+            Some(FoundItem::InSubInventory(inv)) => {
+                let Some(inventory) = self.all_inventories.get_mut(inv) else {
+                    error!("Failed to get inventory {:?} while trying to remove item {:?}. This should not happen since we just found the item in this inventory. Skipping.", inv, item);
+                    return Err(RemoveFailed::InventoryNotFound(inv));
+                };
+                inventory.remove(item).ok_or(RemoveFailed::FailedToRemove)?;
+                Ok(inv)
+            },
+            None => Err(RemoveFailed::ItemNotFound(item)),
+        }
     }
 
     fn find(check: AssetId<Inventory>, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<AssetId<Inventory>> {
@@ -249,4 +263,6 @@ pub enum RemoveFailed {
     ItemNotFound(Entity),
     #[error("Failed to remove item from inventory")]
     FailedToRemove,
+    #[error("Failed to remove item from inventory: inventory asset {0:?} not found")]
+    InventoryNotFound(AssetId<Inventory>),
 }

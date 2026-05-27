@@ -12,7 +12,7 @@ mod rendering;
 pub mod prelude {
     pub use crate::inventory::{
         Inventory, Item, ItemDescriptor, Orientation, Shape, Layout,
-        CellType, inventory_relationship::*,
+        CellType, inventory_relationship::*, FoundItem
     };
 
     pub use crate::inventory::manager::{AddFailed, InventoryCommands, InventoryManager};

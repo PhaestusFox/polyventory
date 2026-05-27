@@ -42,7 +42,7 @@ fn spawn_inventory_window(
             }
         }
         for (slot_type, shape) in inventory.slots() {
-            let size = shape.size().as_vec2() * style.cell_size;
+            let size = shape.bounds().size() * style.cell_size;
             let pos = shape.offset.as_vec2() * style.cell_size;
             commands.spawn((
                 SlotNode,
@@ -68,7 +68,7 @@ fn spawn_inventory_window(
             ));
         }
         for (item, shape) in inventory.items() {
-            let size = shape.size().as_vec2() * style.cell_size;
+            let size = shape.bounds().size() * style.cell_size;
             commands.spawn((
                 ItemNode(entity),
                 RenderedItem {

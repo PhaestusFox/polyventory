@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 
+mod collision;
+pub use collision::AabbBox;
+
 #[derive(Reflect, Default, Debug, Clone)]
 pub struct Shape {
     pub offset: IVec2,
@@ -9,15 +12,11 @@ pub struct Shape {
 
 impl std::fmt::Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Shape {{ offset: x:{}, y:{}, orientation: {:?}, layout: {} }}", self.offset.x, self.offset.y, self.orientation, self.layout)
+        write!(f, "Shape {{ offset: (x:{}, y:{}),\norientation: {:?},\nlayout: {} }}", self.offset.x, self.offset.y, self.orientation, self.layout)
     }
 }
 
 impl Shape {
-    pub fn size(&self) -> UVec2 {
-        self.layout.size()
-    }
-
     pub fn iter_cells(&self) -> impl Iterator<Item = IVec2> {
         OffsetIter {
             iter: ShapeIter {
@@ -26,6 +25,17 @@ impl Shape {
             },
             offset: self.offset,
         }
+    }
+
+    pub fn bounds(&self) -> AabbBox {
+        let mut bounds = self.layout.bounds();
+        bounds *= self.orientation;
+        bounds += self.offset;
+        bounds
+    }
+
+    pub fn can_fit(&self, other: &Shape) -> bool {
+        other.bounds() < self.bounds()
     }
 }
 
@@ -73,12 +83,20 @@ impl Layout {
             current: IVec2::ZERO,
         }
     }
+
+    pub fn bounds(&self) -> AabbBox {
+        let size = self.size();
+        AabbBox {
+            min: IVec2::ZERO,
+            max: IVec2::new(size.x as i32 - 1, size.y as i32 - 1),
+        }
+    }
 }
 
 impl std::fmt::Display for Layout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Layout::Rect { size } => write!(f, "Rect {{ Width :{}, Height :{} }}", size.x, size.y),
+            Layout::Rect { size } => write!(f, "Rect {{ Width :{},\n Height :{} }}", size.x, size.y),
         }
     }
 }

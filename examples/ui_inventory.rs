@@ -126,11 +126,16 @@ fn spawn_inventory(
         .open_inventory(&test_inventory_handle)
         .expect("Just created Inventory");
     let empty_bottle = loot.items[0].clone();
-    let bottle = match test_inventory.spawn_item(empty_bottle) {
+    let bottle = match test_inventory.spawn_item(empty_bottle.clone()) {
         Ok(item) => item,
         Err(f) => {
+            panic!("Failed to spawn empty bottle: {:?}", f);
+        }
+    };
+    match test_inventory.spawn_item_at(empty_bottle, IVec2::new(0, 0), Orientation::Deg180) {
+        Ok(_) => {},
+        Err(f) => {
             error!("Failed to spawn empty bottle: {:?}", f);
-            return;
         }
     };
     _ = dbg!(test_inventory.remove_item(bottle));
@@ -203,8 +208,8 @@ fn detect_drop(
 ) {
     for message in messages.read() {
         match message {
-            AssetEvent::Modified { .. } => {},
-            other => info!("Received inventory asset event: {:?}", other),
+            AssetEvent::Removed { id } => info!("Received inventory asset event: {:?}", id),
+            _ => {}
         }
     }
 }
