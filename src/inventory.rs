@@ -115,7 +115,6 @@ impl Inventory {
                 for cell in slot_layout.iter_cells() {
                     shape.offset = cell;
                     if self.can_fit(slot_type, &shape) {
-                        println!("Found fit for {} in inventory: {:?}", item_type.name(), shape);
                         return Some((slot_type.clone(), shape));
                     }
                 }

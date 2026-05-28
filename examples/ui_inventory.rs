@@ -3,7 +3,7 @@ use std::path::Path;
 use bevy::{asset::AssetPath, input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use polyventory::prelude::*;
-use rand::seq::IndexedRandom;
+use rand::{RngExt, seq::IndexedRandom};
 
 fn main() {
     let mut app = App::new();
@@ -80,7 +80,7 @@ enum Loaded {
 
 #[derive(Resource)]
 pub struct LootTable {
-    pockets: Vec<Handle<ItemDescriptor>>,
+    fixed: Vec<Handle<ItemDescriptor>>,
     items: Vec<Handle<ItemDescriptor>>,
 }
 
@@ -90,20 +90,22 @@ impl FromWorld for LootTable {
         let items = vec![
             asset_server.load("items/bottle.item"),
             asset_server.load("items/bottle_water.item"),
+            asset_server.load("items/lighter.item"),
             asset_server.load("items/battery_phone.item"),
             asset_server.load("items/phone_on.item"),
             asset_server.load("items/phone_off.item"),
+            asset_server.load("items/can.item"),
+            asset_server.load("items/ketchup_packet.item"),
+            asset_server.load("items/torch.item"),
             asset_server.load("items/backpack.item"),
-            asset_server.load("items/backpack.item"),
-            asset_server.load("items/backpack.item#SmallPocket"),
             asset_server.load("items/backpack.item#SmallPocket"),
             asset_server.load("items/backpack.item#BigPocket"),
         ];
-        let pockets = vec![
-            asset_server.load("items/backpack.item#SmallPocket"),
-            asset_server.load("items/backpack.item#BigPocket"),
-        ];
-        Self { items, pockets }
+            let known = vec![
+                asset_server.load("items/battery_phone.item"),
+                asset_server.load("items/lighter.item"),
+            ];
+        Self { items, fixed: known }
     }
 }
 
@@ -140,30 +142,51 @@ fn spawn_inventory(
     };
     _ = dbg!(test_inventory.remove_item(bottle));
     test_inventory.commands.entity(bottle).insert(Kill);
-    let phone = loot.items[3].clone();
-    let r = test_inventory.spawn_item(phone);
-    info!("Spawning phone: {:?}", r);
     let water_bottle = loot.items[1].clone();
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
         IVec2::new(1, 8),
-        Orientation::Deg0,
+        Orientation::Deg270,
     );
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Deg270);
-    info!("Spawning water bottle at 1,8 with 270 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Deg90);
-    info!("Spawning water bottle at 3,9 with 90 rotation: {:?}", r);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Deg90);
+    info!("Spawning water bottle at 1,8 with 90 rotation: {:?}", r);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 7), Orientation::Deg180);
+    info!("Spawning water bottle at 1,7 with 180 rotation: {:?}", r);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Deg270);
+    info!("Spawning water bottle at 3,9 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    for _ in 0..15 {
+    let rotations = [Orientation::Deg90];
+    let mut spawned = 0;
+    while spawned < 15 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
-        match test_inventory.spawn_item(item) {
-            Ok(_) => {},
+        let orientation = *rotations.choose(&mut rng).expect("At least one orientation");
+        match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..30), rng.random_range(0..50)), orientation) {
+            Ok(_) => {
+                spawned += 1;
+            },
             Err(f) => error!("Failed to spawn random item: {:?}", f),
+        }
+    }
+    let item = loot.fixed[0].clone();
+    let container = test_inventory.commands.spawn(Name::new("fill")).id();
+    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+        test_inventory.commands.entity(e).insert(ChildOf(container));
+        spawned += 1;
+        if spawned > 30 * 50 {
+            panic!("Too many items spawned, something is wrong");
+        }
+    }
+    let item = loot.fixed[1].clone();
+    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+        test_inventory.commands.entity(e).insert(ChildOf(container));
+        spawned += 1;
+        if spawned > 30 * 50 {
+            panic!("Too many items spawned, something is wrong");
         }
     }
 

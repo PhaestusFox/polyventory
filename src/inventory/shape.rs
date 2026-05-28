@@ -46,6 +46,47 @@ impl Shape {
             Orientation::Deg270 => Rot2::degrees(270.0),
         }
     }
+
+    pub fn ui_transform(&self) -> UiTransform {
+        // 15, -15
+        /*
+            90
+            'x = (x - y) / 2y
+            'x = (x - y) / (2 * y)
+            'y = (y - x) / 2(x/y)
+            'y = (-x + y)*y / 2x
+        */
+        let size = self.bounds().size().as_vec2();
+        // 90
+        // 1 x 4 -> 4 x 1 -> 1.5 x -0.375
+        // x = (4 - 1) * 0.5 * 1 = 1.5
+        // y = (-4 + 1) * 1 / 8 = -0.375
+        // 5 x 7 -> 7 x 5 -> 0.2 x -0.714
+        // 'x = (7 - 5) / (5 * 2) = 0.2
+        // 'y = (-7 + 5)*5 / 2*7 = -0.714
+        // 2 x 3 -> 3 x 2 -> 0.25 x -0.5
+        //'x = (3 - 2) / (2 * 2) = 0.25
+        //'y = (-3 + 2)*2 / 2*3 = -0.333
+        // 2 x 2 -> 2 x 2 -> 0.0 x -0.5
+        // 'x = (2 - 2) / (2 * 2)
+        // 'y = (-2 + 2)*2 / 2*2
+
+        let t = match self.orientation {
+            Orientation::Deg0 => Val2::ZERO,
+            Orientation::Deg90 => Val2::new(
+                Val::Percent((size.x - size.y) / (size.y * 2.) * 100.0),
+                Val::Percent((-size.x + size.y) * size.y / (2.0 * size.x) * 100.0),
+            ),
+            Orientation::Deg180 => Val2::ZERO,
+            Orientation::Deg270 => Val2::ZERO,
+        };
+        // let offset = 
+        UiTransform {
+            translation: t,
+            rotation: self.rotation(),
+            ..Default::default()
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default, strum_macros::EnumIter)]
