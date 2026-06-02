@@ -165,6 +165,24 @@ fn rotation_test() {
     box2 *= Orientation::Deg90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
+
+    let mut box3 = AabbBox {
+        min: IVec2::new(0, 0),
+        max: IVec2::new(1, 1),
+    };
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(0, -1));
+    assert_eq!(box3.max, IVec2::new(1, 0));
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(-1, -1));
+    assert_eq!(box3.max, IVec2::new(0, 0));
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(-1, 0));
+    assert_eq!(box3.max, IVec2::new(0, 1));
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(1, 1));
+    
 }
 
 #[test]
