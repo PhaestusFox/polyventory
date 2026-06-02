@@ -140,11 +140,11 @@ fn rotation_test() {
     assert_eq!(box1.min, IVec2::new(0, 0));
     assert_eq!(box1.max, IVec2::new(2, 2));
     box1 *= Orientation::Deg90;
-    assert_eq!(box1.min, IVec2::new(0, -2));
-    assert_eq!(box1.max, IVec2::new(2, 0));
+    assert_eq!(box1.min, IVec2::new(0, 0));
+    assert_eq!(box1.max, IVec2::new(2, 2));
     box1 *= Orientation::Deg180;
-    assert!(box1.min == IVec2::new(-2, 0));
-    assert!(box1.max == IVec2::new(0, 2));
+    assert!(box1.min == IVec2::new(0, 0));
+    assert!(box1.max == IVec2::new(2, 2));
     box1 *= Orientation::Deg90;
     assert!(box1.min == IVec2::new(0, 0));
     assert!(box1.max == IVec2::new(2, 2));
@@ -154,35 +154,40 @@ fn rotation_test() {
         max: IVec2::new(1, 1),
     };
     box2 *= Orientation::Deg90;
-    assert_eq!(box2.min, IVec2::new(1, -1));
-    assert_eq!(box2.max, IVec2::new(1, -1));
+    assert_eq!(box2.min, IVec2::new(1, 1));
+    assert_eq!(box2.max, IVec2::new(1, 1));
     box2 *= Orientation::Deg90;
-    assert_eq!(box2.min, IVec2::new(-1, -1));
-    assert_eq!(box2.max, IVec2::new(-1, -1));
+    assert_eq!(box2.min, IVec2::new(1, 1));
+    assert_eq!(box2.max, IVec2::new(1, 1));
     box2 *= Orientation::Deg90;
-    assert_eq!(box2.min, IVec2::new(-1, 1));
-    assert_eq!(box2.max, IVec2::new(-1, 1));
+    assert_eq!(box2.min, IVec2::new(1, 1));
+    assert_eq!(box2.max, IVec2::new(1, 1));
     box2 *= Orientation::Deg90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
 
     let mut box3 = AabbBox {
         min: IVec2::new(0, 0),
-        max: IVec2::new(1, 1),
+        max: IVec2::new(3, 1),
     };
     box3 *= Orientation::Deg90;
-    assert_eq!(box3.min, IVec2::new(0, -1));
-    assert_eq!(box3.max, IVec2::new(1, 0));
-    box3 *= Orientation::Deg90;
-    assert_eq!(box3.min, IVec2::new(-1, -1));
-    assert_eq!(box3.max, IVec2::new(0, 0));
-    box3 *= Orientation::Deg90;
-    assert_eq!(box3.min, IVec2::new(-1, 0));
-    assert_eq!(box3.max, IVec2::new(0, 1));
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(1, 3));
     box3 *= Orientation::Deg90;
     assert_eq!(box3.min, IVec2::new(0, 0));
-    assert_eq!(box3.max, IVec2::new(1, 1));
-    
+    assert_eq!(box3.max, IVec2::new(3, 1));
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(1, 3));
+    box3 *= Orientation::Deg90;
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(3, 1));
+    box3 *= Orientation::Deg180;
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(3, 1));
+    box3 *= Orientation::Deg270;
+    assert_eq!(box3.min, IVec2::new(0, 0));
+    assert_eq!(box3.max, IVec2::new(1, 3));
 }
 
 #[test]
