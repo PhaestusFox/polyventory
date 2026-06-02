@@ -160,7 +160,7 @@ fn spawn_inventory(
     info!("Spawning water bottle at 3,9 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    let rotations = [Orientation::Deg90];
+    let rotations = [Orientation::Deg270];
     let mut spawned = 0;
     while spawned < 15 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();

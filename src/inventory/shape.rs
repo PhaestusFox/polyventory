@@ -53,13 +53,19 @@ impl Shape {
         // u = x - y / y * 0.5
         // v = -(x + y - 2) / x * 0.5
 
-        let aspect = size.x as f32 / size.y as f32;
-
         let t = match self.orientation {
-            Orientation::Deg0 | Orientation::Deg180 => Val2::ZERO,
-            Orientation::Deg90 | Orientation::Deg270 => Val2::new(
+            Orientation::Deg0 => Val2::ZERO,
+            Orientation::Deg90 => Val2::new(
                 Val::Percent((size.x - size.y) / size.y * 50.0),
                 Val::Percent(-(size.x + size.y - 2.) / size.x * 50.),
+            ),
+            Orientation::Deg180 => Val2::new(
+                Val::Percent((-size.x + 1.) / size.x * 100.),
+                Val::Percent((-size.y + 1.) / size.y * 100.),
+            ),
+            Orientation::Deg270 =>Val2::new(
+                Val::Percent(-(size.x + size.y - 2.) / size.y * 50.),
+                Val::Percent((size.y - size.x) / size.x * 50.),
             ),
         };
         // let offset = 
