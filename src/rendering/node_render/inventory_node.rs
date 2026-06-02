@@ -1,8 +1,5 @@
 use super::*;
 
 #[derive(Component, Default)]
-#[require(Node = Node {
-    margin: UiRect::all(Val::Auto),
-    ..Node::DEFAULT
-})]
+#[require(Node)]
 pub struct InventoryNode;

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Component, Reflect, Default)]
 pub enum CellType {
+    Any,
     #[default]
     Untyped,
     WaterTight,

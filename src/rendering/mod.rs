@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::{lifecycle::HookContext, world::DeferredWorld}, prelude::*};
 use crate::prelude::*;
 
 mod render;
@@ -7,6 +7,9 @@ pub mod node_render;
 
 #[cfg(feature = "sprite_rendering")]
 pub mod sprite_render;
+
+#[cfg(feature = "tooltips")]
+pub mod tooltip;
 
 pub mod interaction;
 mod style;
@@ -55,6 +58,7 @@ impl Plugin for InventoryRenderPlugin {
 }
 
 #[derive(Component, Deref)]
+#[component(on_add = Self::on_add)]
 #[relationship_target(relationship = RenderedSlot)]
 pub struct RenderedInventory {
     #[deref]
@@ -70,6 +74,16 @@ impl RenderedInventory {
 
     pub fn get_slot(&self, index: usize) -> Option<Entity> {
         self.slots.get(index).cloned()
+    }
+
+    fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+        let target: AssetId<Inventory> = world.get::<RenderedInventory>(ctx.entity).expect("This is RenderInventory OnAdd").into();
+        let mut inventorys = world.resource_mut::<Assets<Inventory>>();
+        let Some(inventory) = inventorys.get_mut_untracked(target) else {
+            warn!("Failed to find Inventory({:?}) for RenderedInventory({:?})", target, ctx.entity);
+            return;
+        };
+        inventory.add_renderer(ctx.entity);
     }
 }
 

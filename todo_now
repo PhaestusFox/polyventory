@@ -1,14 +1,8 @@
-[x] change position from u32 -> i32
+readd pickup on click
 
 remove item from inventory when picked up
 allow placing anywhere in inventory not just hardcoded place
 
 add debug tools
- - render mini inventory showing current shape
+ - render mini inventory showing current shape -- need shader?
  - show where attempting to place
-
-Have position and shape on Item Entity
- - backprop item shape and position to rendering Entitys
- - Add item can fetch shape and position from Item Entity
- - change add_item_at -> add_item
- - change add_item -> fit_item

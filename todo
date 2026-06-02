@@ -28,6 +28,8 @@
     [ ] Allow Positioning Inventory
 [?] Items can be different size and shape depending on slot - 3.
 [ ] Add shader to render slots
+[ ] allow add item to add to sub inventory
+[ ] allow rendering inventory to render sub inventory
 
 [ ] Add save\load inventory
 - Serde

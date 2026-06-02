@@ -16,7 +16,7 @@ use strum::IntoEnumIterator;
 // mod slot;
 // pub use slot::*;
 
-use crate::{inventory::manager::AddFailed};
+use crate::inventory::{manager::AddFailed};
 
 mod inventory_descriptor;
 pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
@@ -24,8 +24,9 @@ pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
 #[derive(Asset, Reflect, Default)]
 pub struct Inventory {
     name: String,
-    slots: HashMap<CellType, shape::Shape>,
+    slots: HashMap<CellType, Shape>,
     items: EntityHashMap<entry::Entry>,
+    rendering: HashSet<Entity>,
 }
 
 impl Inventory {
@@ -35,16 +36,17 @@ impl Inventory {
             name: name.into(),
             slots: HashMap::default(),
             items: EntityHashMap::default(),
+            rendering: HashSet::default(),
         }
     }
 
     /// Creates a new inventory with the specified width, height, and slots.
-    pub fn new_with_slots(slots: impl Iterator<Item = (CellType, shape::Shape)>) -> Self {
-        Self {
-            name: String::new(),
-            slots: slots.collect(),
-            items: EntityHashMap::default(),
+    pub fn new_with_slots(name: impl Into<String>, slots: impl Iterator<Item = (CellType, Shape)>) -> Self {
+        let mut inventory = Self::new(name);
+        for (cell_type, shape) in slots {
+            inventory.add_slot(cell_type, shape);
         }
+        inventory
     }
 
     /// Add an item to the inventory. in the first available space.
@@ -54,7 +56,7 @@ impl Inventory {
         item_type: &ItemDescriptor,
         entity: Entity,
         sub_inv: Option<AssetId<Inventory>>,
-    ) -> Option<(CellType, shape::Shape)> {
+    ) -> Option<(CellType, Shape)> {
         for (slot_type, layout) in item_type.sizes() {
             // todo find fist empty space that can fit the item
             let shape = Shape {
@@ -87,7 +89,7 @@ impl Inventory {
     }
 
     /// Add a slot to the inventory.
-    pub fn add_slot(&mut self, cell_type: CellType, shape: shape::Shape) {
+    pub fn add_slot(&mut self, cell_type: CellType, shape: Shape) {
         self.slots.insert(cell_type, shape);
     }
 
@@ -101,7 +103,7 @@ impl Inventory {
         self.items.remove(&item)
     }
 
-    pub fn fit(&self, item_type: &ItemDescriptor) -> Option<(CellType, Shape)> {
+    pub fn fit_item(&self, item_type: &ItemDescriptor) -> Option<(CellType, Shape)> {
         for (slot_type, item_layout) in item_type.sizes() {
             let Some(slot_layout) = self.slots.get(slot_type) else {
                 continue;
@@ -123,7 +125,29 @@ impl Inventory {
         None
     }
 
-    pub fn can_fit(&self, cell_type: &CellType, item_shape: &shape::Shape) -> bool {
+    pub fn fit(&self, cell_type: &CellType, layout: &Layout) -> Option<Shape> {
+        let Some(slot_layout) = self.slots.get(cell_type) else {
+            return None;
+        };
+        let mut shape = Shape {
+            layout: layout.clone(),
+            offset: IVec2::ZERO,
+            orientation: Orientation::Deg0,
+        };
+        for cell in slot_layout.iter_cells() {
+            shape.offset = cell;
+            for oroientation in Orientation::iter() {
+                shape.orientation = oroientation;
+                if self.can_fit(cell_type, &shape) {
+                    println!("Found fit @ {:?} by {:?}", shape.offset, oroientation);
+                    return Some(shape);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn can_fit(&self, cell_type: &CellType, item_shape: &Shape) -> bool {
         // incompatible slot type
         let Some(slot_shape) = self.slots.get(cell_type) else {
             return false;
@@ -156,15 +180,23 @@ impl Inventory {
         self.items.insert(item, entry);
     }
 
-    pub fn slots(&self) -> impl Iterator<Item = (&CellType, &shape::Shape)> {
+    pub fn slots(&self) -> impl Iterator<Item = (&CellType, &Shape)> {
         self.slots.iter()
+    }
+
+    pub fn get_slot(&self, cell_type: &CellType) -> Option<&Shape> {
+        self.slots.get(cell_type)
     }
 
     pub fn items(&self) -> impl Iterator<Item = (&Entity, &entry::Entry)> {
         self.items.iter()
     }
 
-    pub fn get_shape(&self, item: Entity) -> Option<&shape::Shape> {
+    pub fn item_entities(&self) -> impl Iterator<Item = Entity> {
+        self.items.keys().cloned()
+    }
+
+    pub fn get_shape(&self, item: Entity) -> Option<&Shape> {
         self.items.get(&item).map(|entry| &entry.shape)
     }
 
@@ -189,6 +221,32 @@ impl Inventory {
             }
         }
         None
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn has_any_slot(&self) -> bool {
+        self.slots.contains_key(&CellType::Any)
+    }
+
+    pub fn add_any(&mut self, item: Entity, mut shape: Shape) -> bool {
+        if let Some(fit) = self.fit(&CellType::Any, &Layout::Rect { size: UVec2::ONE }) {
+            shape.offset = fit.offset;
+            self.insert_item(item, entry::Entry { shape, sub_inventory: None });
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn add_renderer(&mut self, entity: Entity) {
+        self.rendering.insert(entity);
+    }
+
+    pub fn windows(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.rendering.iter().cloned()
     }
 }
 

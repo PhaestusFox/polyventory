@@ -18,8 +18,10 @@ impl InventoryManager<'_, '_> {
         inventory: impl Into<AssetId<Inventory>>,
     ) -> Option<InventoryCommands<'_, '_, '_>> {
         let id = inventory.into();
-        let current = self.inventory_assets.remove_untracked(id)?;
+        trace!("Opening inventory asset: {}", id);
+        let current = self.inventory_assets.remove(id)?;
         Some(InventoryCommands {
+            modified: false,
             commands: self.commands.reborrow(),
             current_inventory: current,
             inv_id: id,
@@ -46,9 +48,14 @@ impl InventoryManager<'_, '_> {
     pub fn get_strong(&mut self, id: AssetId<Inventory>) -> Option<Handle<Inventory>> {
         self.inventory_assets.get_strong_handle(id)
     }
+
+    pub fn read_inventory(&self, inventory: impl Into<AssetId<Inventory>>) -> Option<&Inventory> {
+        self.inventory_assets.get(inventory.into())
+    }
 }
 
 pub struct InventoryCommands<'w, 's, 'a> {
+    modified: bool,
     pub commands: Commands<'w, 's>,
     current_inventory: Inventory,
     inv_id: AssetId<Inventory>,
@@ -62,6 +69,9 @@ impl Drop for InventoryCommands<'_, '_, '_> {
     fn drop(&mut self) {
         let i = core::mem::take(&mut self.current_inventory);
         _ = self.all_inventories.insert(self.inv_id, i).unwrap();
+        if self.modified {
+            self.all_inventories.get_mut(self.inv_id);
+        }
     }
 }
 
@@ -106,15 +116,29 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(handle) else {
             return Err(AddFailed::ItemDescriptorNotFound(handle.descriptor.clone()));
         };
+        if self.current_inventory.has_any_slot() {
+            return if self.current_inventory.add_any(item, shape.clone()) {
+                self.modified = true;
+                Ok(())
+            } else {
+                warn!(
+                    "Failed to add {} to inventory in any slot at position {:?}: not yet fully implemented",
+                    descriptor.name(),
+                    shape.offset,
+                );
+                Err(AddFailed::NotYetFullImplemented)
+            };
+        }
         for (slot_type, slot_layout) in descriptor.sizes() {
             if shape.layout != *slot_layout {
                 continue;
             }
-            if self.current_inventory.can_fit(slot_type, &shape) {
+            if self.can_fit(slot_type, &shape) {
                 self.current_inventory.insert_item(item, entry::Entry {
                     shape: shape.clone(),
                     sub_inventory: sub_inv.map(|s| s.0.id()),
                 });
+                self.modified = true;
                 return Ok(())
             }
         }
@@ -125,7 +149,7 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(AddFailed::ItemDescriptorNotFound(item.clone()));
         };
-        let Some((cell_type, shape)) = self.fit(descriptor) else {
+        let Some((cell_type, shape)) = self.fit_item(descriptor) else {
             return Err(AddFailed::DoesNotFit(self.inv_id));
         };
         self.spawn_item_at_internal(descriptor, item, cell_type, shape)
@@ -229,6 +253,7 @@ impl core::ops::Deref for InventoryCommands<'_, '_, '_> {
 
 impl core::ops::DerefMut for InventoryCommands<'_, '_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        self.modified = true;
         &mut self.current_inventory
     }
 }

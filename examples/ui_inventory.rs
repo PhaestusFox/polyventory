@@ -125,8 +125,9 @@ fn spawn_inventory(
     let s = &mut inventory_manager;
     let test_inventory_handle = s.create_inventory(test_inventory);
     let mut test_inventory = s
-        .open_inventory(&test_inventory_handle)
-        .expect("Just created Inventory");
+    .open_inventory(&test_inventory_handle)
+    .expect("Just created Inventory");
+    let item_container = test_inventory.commands.spawn(Name::new("ITEMS")).id();
     let empty_bottle = loot.items[0].clone();
     let bottle = match test_inventory.spawn_item(empty_bottle.clone()) {
         Ok(item) => item,
@@ -134,14 +135,16 @@ fn spawn_inventory(
             panic!("Failed to spawn empty bottle: {:?}", f);
         }
     };
+    test_inventory.commands.entity(bottle).insert(ChildOf(item_container));
     match test_inventory.spawn_item_at(empty_bottle, IVec2::new(0, 0), Orientation::Deg180) {
-        Ok(_) => {},
+        Ok(e) => {
+            test_inventory.commands.entity(e).insert(ChildOf(item_container));
+        },
         Err(f) => {
             error!("Failed to spawn empty bottle: {:?}", f);
         }
     };
     _ = dbg!(test_inventory.remove_item(bottle));
-    test_inventory.commands.entity(bottle).insert(Kill);
     let water_bottle = loot.items[1].clone();
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
@@ -166,7 +169,8 @@ fn spawn_inventory(
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         let orientation = *rotations.choose(&mut rng).expect("At least one orientation");
         match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..30), rng.random_range(0..50)), orientation) {
-            Ok(_) => {
+            Ok(e) => {
+                test_inventory.commands.entity(e).insert(ChildOf(item_container));
                 spawned += 1;
             },
             Err(f) => error!("Failed to spawn random item: {:?}", f),
@@ -214,7 +218,12 @@ fn spawn_inventory(
     RenderedInventory::new(test_inventory_handle.clone()),
     InventoryNode,
     Name::new("Test Inventory Node"),
-    InventoryStyleHandle(style)));
+    InventoryStyleHandle(style),
+    Node {
+        margin: UiRect::all(Val::Auto),
+        ..Default::default()
+    }
+    ));
 }
 
 #[derive(Component)]

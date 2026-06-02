@@ -17,6 +17,7 @@ impl InInventory {
             error!("Entity {:?} does not have InInventory but it was removed", ctx.entity);  
             return;
         };
+        error!("Entity {:?} was removed from inventory {:?} but it should have been removed with the inventory", ctx.entity, inventory);
         let mut assets = world.resource_mut::<Assets<Inventory>>();
         let Some(inventory) = assets.get_mut(inventory) else {
             warn!("Inventory {:?} no longer exists", inventory);

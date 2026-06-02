@@ -2,7 +2,12 @@ use super::*;
 
 #[derive(Component)]
 #[require(Node, ImageNode)]
+#[relationship(relationship_target = ItemNodes)]
 pub struct ItemNode(pub Entity);
+
+#[derive(Component, Default)]
+#[relationship_target(relationship = ItemNode)]
+pub struct ItemNodes(Vec<Entity>);
 
 pub(super) fn update_item_node_image(
     mut changed: Query<(&RenderedItem, &mut ImageNode, &mut Node, &ItemNode, &mut UiTransform), Changed<RenderedItem>>,
@@ -20,11 +25,13 @@ pub(super) fn update_item_node_image(
             warn!("Item entity {:?} has an Item component with a handle that does not correspond to an ItemDescriptor asset", displayed.item);
             continue;
         };
-        let Some((image_handle, size)) = descriptor.get_image(&in_inventory.1) else {
+        let size = if let Some((image_handle, size)) = descriptor.get_image(&in_inventory.1) {
+            image.image = image_handle;
+            Some(size)
+        } else {
             error!("Item entity {:?} does not have an image compatible with its slot type {:?}", displayed.item, in_inventory.0);
-            continue;
+            None
         };
-        image.image = image_handle;
         let Some(inventory) = inventorys.get(in_inventory.0) else {
             warn!("Inventory asset {:?} not found for item entity {:?}", in_inventory.0, displayed.item);
             continue;
@@ -33,7 +40,7 @@ pub(super) fn update_item_node_image(
             warn!("Item entity {:?} not found in inventory {:?}", displayed.item, in_inventory.0);
             continue;
         };
-        // let size = item.bounds().size();
+        let size = size.unwrap_or_else(|| item.bounds().size());
         // let size = style.cell_size * size.as_vec2();
         *transform = item.ui_transform();
         transform.rotation = item.rotation();

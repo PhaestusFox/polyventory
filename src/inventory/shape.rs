@@ -68,7 +68,6 @@ impl Shape {
                 Val::Percent((size.y - size.x) / size.x * 50.),
             ),
         };
-        // let offset = 
         UiTransform {
             translation: t,
             rotation: self.rotation(),

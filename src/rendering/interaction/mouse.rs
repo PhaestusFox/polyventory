@@ -1,6 +1,5 @@
 use bevy::ecs::system::{SystemParam};
 use bevy::prelude::*;
-use crate::prelude::*;
 use super::*;
 
 pub struct MouseInventoryPlugin;
@@ -17,6 +16,10 @@ fn detect_pickup(
     icons: Query<&RenderedItem>,
     mut commands: Commands,
 ) {
+    // skip if not Primary click
+    if click.button != PointerButton::Primary {
+        return;
+    }
     let Ok(rendered_item) = icons.get(click.entity) else {
         return;
     };
@@ -30,7 +33,6 @@ fn detect_drop(
     cursor: InventoryCursor,
     icons: Query<&RenderedInventory>,
     slot: Query<&RenderedSlot>,
-    mut inventory_manager: InventoryManager,
 ) {
     // if cursor.is_empty() {
     //     return;

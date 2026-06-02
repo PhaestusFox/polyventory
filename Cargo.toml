@@ -8,25 +8,31 @@ bevy = { version = "0.18", default-features = false }
 thiserror = "2"
 strum_macros = "0.28"
 strum = "0.28"
+indexmap = "*"
+bevy-inspector-egui = {version = "*", optional = true}
 
 
 [dev-dependencies]
-bevy-inspector-egui = "*"
-bevy = { version = "0.18", features = ["default"] }
+bevy = { version = "0.18", features = ["default", "track_location"] }
 rand = "*"
 
 [features]
-default = ["tooltips", "node_rendering", "sprite_rendering", "mouse_interaction"]
+default = ["tooltips", "node_rendering", "sprite_rendering", "mouse_interaction", "inspector"]
 rendering = []
 node_rendering = ["rendering"]
 sprite_rendering = ["rendering"]
 mouse_interaction = ["interaction"]
 interaction = []
-tooltips = ["bevy/experimental_bevy_feathers", "interaction"]
+tooltips = ["bevy/experimental_bevy_feathers", "rendering"]
+inspector = ["dep:bevy-inspector-egui"]
 
 [[example]]
 name = "basic_inventory"
-features = ["bevy/file_watcher"]
+features = ["bevy/file_watcher", "inspector"]
+
+[[example]]
+name = "ui_inventory"
+features = ["bevy/file_watcher", "inspector", "node_rendering"]
 
 [profile.release]
 debug = true

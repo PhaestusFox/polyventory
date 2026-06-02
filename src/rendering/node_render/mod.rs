@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{platform::collections::HashSet, prelude::*};
 
 use crate::{prelude::*, rendering::{RenderedInventory, RenderedSlot}};
 
@@ -11,7 +11,8 @@ impl Plugin for InventoryNodePlugin {
         if self.auto_require {
             app.register_required_components::<RenderedInventory, InventoryNode>();
         }
-        app.add_systems(PreUpdate, (spawn_inventory_window, slot_node::update_image_cell_scale, item_node::update_item_node_image));
+        app.add_systems(PreUpdate, (spawn_inventory_node, update_inventory_node));
+        app.add_systems(Update, (slot_node::update_image_cell_scale, item_node::update_item_node_image));
     }
 }
 
@@ -21,10 +22,11 @@ mod slot_node;
 pub use slot_node::SlotNode;
 mod item_node;
 pub use item_node::ItemNode;
+pub use item_node::ItemNodes;
 
-fn spawn_inventory_window(
+fn spawn_inventory_node(
     mut commands: Commands,
-    mut new: Populated<(Entity, &RenderedInventory, Option<&mut ImageNode>, &mut Node), Added<InventoryNode>>,
+    new: Populated<(Entity, &RenderedInventory, Option<&mut ImageNode>, &mut Node), Added<InventoryNode>>,
     mut inventory_manager: InventoryManager,
     styles: InventoryStyler,
 ) {
@@ -54,11 +56,11 @@ fn spawn_inventory_window(
             commands.spawn((
                 SlotNode,
                 Node {
-                width: Val::Px(size.x),
-                height: Val::Px(size.y),
-                grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
-                grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
-                ..Default::default()
+                    width: Val::Px(size.x),
+                    height: Val::Px(size.y),
+                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
+                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                    ..Default::default()
                 },
                 ImageNode {
                     image: style.cell_icon.clone(),
@@ -88,6 +90,162 @@ fn spawn_inventory_window(
                 },
                 ChildOf(entity),
             ));
+        }
+    }
+}
+
+fn update_inventory_node(
+    mut commands: Commands,
+    mut changes: MessageReader<AssetEvent<Inventory>>,
+    mut inventory_nodes: Query<(Ref<RenderedInventory>, &mut Node, Option<&ItemNodes>), With<InventoryNode>>,
+    slots: Query<&RenderedSlot, With<SlotNode>>,
+    assets: Res<Assets<Inventory>>,
+    render_nodes: Query<&RenderedItem>,
+    styles: InventoryStyler,
+) {
+    let mut done = HashSet::new();
+    for (message, mid) in changes.read_with_id() {
+        // Only care about modified events, added and removed should be handled by spawn and despawn systems
+        info!("Processing asset event for Inventory asset {:?}", message);
+        let id = match message {
+            AssetEvent::Modified { id } => id,
+            _ => continue,
+        };
+        if done.contains(id) {
+            continue;
+        }
+        done.insert(id);
+        // info!("Processing modified event for Inventory asset {:?}:{:?}", id, mid.caller);
+
+        // get the inventory that was modified
+        let Some(inventory) = assets.get(*id) else {
+            warn!("Received modified event for Inventory asset {:?} that is not currently loaded", id);
+            continue;
+        };
+        for rendering in inventory.windows() {
+            let Ok((root, mut node, item_nodes)) = inventory_nodes.get_mut(rendering) else {
+                // TODO dont warn as this is just the case when sprite and node are both used
+                warn!("Inventory asset {:?} modified but failed to find RenderedInventory component for entity {:?}", id, rendering);
+                continue;
+            };
+            if root.is_added() {
+                trace!("Skipping {} as it was only just added", rendering);
+                continue;
+            }
+            let mut need = inventory.slots().map(|(k, _)| k).collect::<HashSet<_>>();
+            let mut update = Vec::new();
+            let mut remove = root.slots.iter().cloned().collect::<HashSet<_>>();
+            for slot_entity in root.iter() {
+                let Ok(slot) = slots.get(slot_entity) else {
+                    // TODO dont warn as this is just the case when sprite and node are both used
+                    warn!("Failed to get SlotNode component for entity {:?} while updating inventory node for Inventory asset {:?}", slot_entity, id);
+                    // if its not ours dont kill it
+                    remove.remove(&slot_entity);
+                    continue;
+                };
+                // if we need this slot remove it from the to spawn list
+                if need.remove(&slot.slot) {
+                    // mark it for update so we can update its size
+                    update.push((slot_entity, &slot.slot));
+                    // remove it from the remove list so we dont delete it
+                    remove.remove(&slot_entity);
+                }
+            }
+            // despawn removed slots
+            for slot in remove {
+                warn!("Despawning slot entity {:?} for removed slot in Inventory asset {:?}", slot, id);
+                commands.entity(slot).despawn();
+            }
+
+            let style = styles.style(rendering);
+            let mut size_max = Vec2::ZERO;
+            let mut size_min = Vec2::ZERO;
+            for new in need {
+                let shape = inventory.get_slot(new).expect("We just checked and it existed");
+                let size = shape.bounds().size().as_vec2() * style.cell_size;
+                let pos = shape.offset.as_vec2() * style.cell_size;
+                size_max = size_max.max(pos + size);
+                size_min = size_min.min(pos);
+                commands.spawn((
+                    SlotNode,
+                    Node {
+                        width: Val::Px(size.x),
+                        height: Val::Px(size.y),
+                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
+                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                        ..Default::default()
+                    },
+                    ImageNode {
+                        image: style.cell_icon.clone(),
+                        image_mode: NodeImageMode::Tiled { tile_x: true, tile_y: true, stretch_value: 1.0 },
+                        ..Default::default()
+                    },
+                    ChildOf(rendering),
+                    ZIndex(-1),
+                    RenderedSlot {
+                        inventory: rendering,
+                        slot: new.clone(),
+                    }
+                ));
+            }
+
+            for (slot, cell) in update {
+                let shape = inventory.get_slot(cell).expect("We just checked and it existed");
+                let size = shape.bounds().size().as_vec2() * style.cell_size;
+                let pos = shape.offset.as_vec2() * style.cell_size;
+                size_max = size_max.max(pos + size);
+                size_min = size_min.min(pos);
+                commands.entity(slot).insert((
+                Node {
+                    width: Val::Px(size.x),
+                    height: Val::Px(size.y),
+                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
+                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                    ..Default::default()
+                },
+            ));
+            }
+
+            node.width = Val::Px(size_max.x - size_min.x);
+            node.height = Val::Px(size_max.y - size_min.y);
+
+            // TODO update items as well
+
+            // make set of all items in the inventory
+            let mut items = inventory.item_entities().collect::<HashSet<_>>();
+            if let Some(item_nodes) = item_nodes {
+                // iter ItemNodes
+                for item in item_nodes.iter() {
+                    //get RenderedItem from ItemNode
+                    let Ok(target) = render_nodes.get(item) else {
+                        warn!("Failed to get RenderedItem component for entity {:?} while updating inventory node for Inventory asset {:?}", item, id);
+                        continue;
+                    };
+                    // remove already existing items from the set
+                    if !items.remove(&target.item) {
+                        warn!("Despawning ItemNode entity {:?} for removed item in Inventory asset {:?}", item, id);
+                        commands.entity(item).despawn();
+                    };
+                }
+            }
+            info!("After processing existing items, need to spawn new nodes for items: {:?}", items);
+            // for all items still in set
+            for new in items {
+                let shape = inventory.get_shape(new).expect("New items should all definityl be in inventory");
+                // spawn new ItemNode
+                commands.spawn((
+                    ItemNode(rendering),
+                    RenderedItem {
+                        item: new,
+                    },
+                    Node {
+                        grid_row: GridPlacement::start(shape.offset.y as i16 + 1),
+                        grid_column: GridPlacement::start(shape.offset.x as i16 + 1),
+                        ..Default::default()
+                    },
+                    ChildOf(rendering),
+                ));
+            }
         }
     }
 }

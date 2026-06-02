@@ -16,7 +16,7 @@ pub struct InventoryDescriptor {
 impl InventoryDescriptor {
     pub fn create_inventory(&self) -> Inventory {
         let c = self.slots.clone().into_iter();
-        Inventory::new_with_slots(c)
+        Inventory::new_with_slots(String::new(), c)
     }
 }
 

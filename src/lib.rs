@@ -5,9 +5,10 @@ use bevy::{
 
 mod inventory;
 #[cfg(feature = "rendering")]
-mod mouse_interaction;
-#[cfg(feature = "rendering")]
 mod rendering;
+
+#[cfg(feature = "inspector")]
+pub mod egui_inspector;
 
 pub mod prelude {
     pub use crate::inventory::{
@@ -19,8 +20,8 @@ pub mod prelude {
 
     #[cfg(feature = "rendering")]
     // pub use crate::mouse_interaction::MouseInventoryPlugin;
-    #[cfg(feature = "rendering")]
-    pub use crate::mouse_interaction::{ToolTipPlugin, ToolTipSettings};
+    #[cfg(feature = "tooltips")]
+    pub use crate::rendering::tooltip::{ToolTipPlugin, ToolTipSettings};
     #[cfg(feature = "rendering")]
     pub use crate::rendering::render_prelude::*;
 }
