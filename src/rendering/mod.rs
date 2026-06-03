@@ -98,7 +98,7 @@ impl Into<AssetId<Inventory>> for &RenderedInventory {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Debug)]
 #[relationship(relationship_target = RenderedInventory)]
 #[component(immutable)]
 pub struct RenderedSlot {

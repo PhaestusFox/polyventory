@@ -12,7 +12,7 @@ impl Plugin for InventoryNodePlugin {
             app.register_required_components::<RenderedInventory, InventoryNode>();
         }
         app.add_systems(PreUpdate, (spawn_inventory_node, update_inventory_node));
-        app.add_systems(Update, (slot_node::update_image_cell_scale, item_node::update_item_node_image));
+        app.add_systems(Update, (slot_node::update_image_cell_scale, item_node::update_item_node_image, style_inventory_node));
     }
 }
 
@@ -26,16 +26,16 @@ pub use item_node::ItemNodes;
 
 fn spawn_inventory_node(
     mut commands: Commands,
-    new: Populated<(Entity, &RenderedInventory, Option<&mut ImageNode>, &mut Node), Added<InventoryNode>>,
-    mut inventory_manager: InventoryManager,
+    new: Populated<(Entity, &RenderedInventory, Option<&mut ImageNode>, &mut Node, Option<&Pickable>), Added<InventoryNode>>,
+    inventory_manager: InventoryManager,
     styles: InventoryStyler,
 ) {
-    for (entity, target, back_ground, mut node) in new {
+    for (entity, target, back_ground, mut node, pickable) in new {
         let style = styles.style(entity);
         node.display = Display::Grid;
         node.grid_auto_columns = GridTrack::px(style.cell_size.x);
         node.grid_auto_rows = GridTrack::px(style.cell_size.y);
-        let Some(inventory) = inventory_manager.open_inventory(target) else {
+        let Some(inventory) = inventory_manager.read_inventory(target) else {
             warn!("Failed to get Inventory({:?}) for Node({:?})", target.inventory, entity);
             continue;
         };
@@ -49,17 +49,18 @@ fn spawn_inventory_node(
         let mut size_max = Vec2::ZERO;
         let mut size_min = Vec2::ZERO;
         for (slot_type, shape) in inventory.slots() {
-            let size = shape.bounds().size().as_vec2() * style.cell_size;
+            let size = shape.layout.size();
+            let a_size = shape.bounds().size().as_vec2() * style.cell_size;
             let pos = shape.offset.as_vec2() * style.cell_size;
-            size_max = size_max.max(pos + size);
+            size_max = size_max.max(pos + a_size);
             size_min = size_min.min(pos);
-            commands.spawn((
+            let mut e = commands.spawn((
                 SlotNode,
                 Node {
-                    width: Val::Px(size.x),
-                    height: Val::Px(size.y),
-                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
-                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
+                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
+                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
                     ..Default::default()
                 },
                 ImageNode {
@@ -74,22 +75,29 @@ fn spawn_inventory_node(
                     slot: slot_type.clone(),
                 }
             ));
+            if let Some(p) = pickable {
+                e.insert(p.clone());
+            }
         }
         node.width = Val::Px(size_max.x - size_min.x);
         node.height = Val::Px(size_max.y - size_min.y);
         for (item, shape) in inventory.items() {
-            commands.spawn((
+            let size = shape.layout.size();
+            let mut e = commands.spawn((
                 ItemNode(entity),
                 RenderedItem {
                     item: *item,
                 },
                 Node {
-                    grid_row: GridPlacement::start(shape.offset.y as i16 + 1),
-                    grid_column: GridPlacement::start(shape.offset.x as i16 + 1),
+                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
+                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
                     ..Default::default()
                 },
                 ChildOf(entity),
             ));
+            if let Some(p) = pickable {
+                e.insert(p.clone());
+            }
         }
     }
 }
@@ -97,16 +105,15 @@ fn spawn_inventory_node(
 fn update_inventory_node(
     mut commands: Commands,
     mut changes: MessageReader<AssetEvent<Inventory>>,
-    mut inventory_nodes: Query<(Ref<RenderedInventory>, &mut Node, Option<&ItemNodes>), With<InventoryNode>>,
+    mut inventory_nodes: Query<(Ref<RenderedInventory>, &mut Node, Option<&ItemNodes>, Option<&Pickable>), With<InventoryNode>>,
     slots: Query<&RenderedSlot, With<SlotNode>>,
     assets: Res<Assets<Inventory>>,
     render_nodes: Query<&RenderedItem>,
     styles: InventoryStyler,
 ) {
     let mut done = HashSet::new();
-    for (message, mid) in changes.read_with_id() {
+    for message in changes.read() {
         // Only care about modified events, added and removed should be handled by spawn and despawn systems
-        info!("Processing asset event for Inventory asset {:?}", message);
         let id = match message {
             AssetEvent::Modified { id } => id,
             _ => continue,
@@ -115,7 +122,7 @@ fn update_inventory_node(
             continue;
         }
         done.insert(id);
-        // info!("Processing modified event for Inventory asset {:?}:{:?}", id, mid.caller);
+        trace!("Inventory {} changed updating", id);
 
         // get the inventory that was modified
         let Some(inventory) = assets.get(*id) else {
@@ -123,7 +130,7 @@ fn update_inventory_node(
             continue;
         };
         for rendering in inventory.windows() {
-            let Ok((root, mut node, item_nodes)) = inventory_nodes.get_mut(rendering) else {
+            let Ok((root, mut node, item_nodes, picicking)) = inventory_nodes.get_mut(rendering) else {
                 // TODO dont warn as this is just the case when sprite and node are both used
                 warn!("Inventory asset {:?} modified but failed to find RenderedInventory component for entity {:?}", id, rendering);
                 continue;
@@ -162,17 +169,16 @@ fn update_inventory_node(
             let mut size_min = Vec2::ZERO;
             for new in need {
                 let shape = inventory.get_slot(new).expect("We just checked and it existed");
-                let size = shape.bounds().size().as_vec2() * style.cell_size;
+                let size = shape.layout.size();
+                let gsize = shape.bounds().size().as_vec2() * style.cell_size;
                 let pos = shape.offset.as_vec2() * style.cell_size;
-                size_max = size_max.max(pos + size);
+                size_max = size_max.max(pos + gsize);
                 size_min = size_min.min(pos);
-                commands.spawn((
+                let mut e = commands.spawn((
                     SlotNode,
                     Node {
-                        width: Val::Px(size.x),
-                        height: Val::Px(size.y),
-                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
-                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
+                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
                         ..Default::default()
                     },
                     ImageNode {
@@ -187,20 +193,22 @@ fn update_inventory_node(
                         slot: new.clone(),
                     }
                 ));
+                if let Some(p) = picicking {
+                    e.insert(p.clone());
+                }
             }
 
             for (slot, cell) in update {
                 let shape = inventory.get_slot(cell).expect("We just checked and it existed");
-                let size = shape.bounds().size().as_vec2() * style.cell_size;
+                let size = shape.layout.size();
+                let gsize = shape.bounds().size().as_vec2() * style.cell_size;
                 let pos = shape.offset.as_vec2() * style.cell_size;
-                size_max = size_max.max(pos + size);
+                size_max = size_max.max(pos + gsize);
                 size_min = size_min.min(pos);
                 commands.entity(slot).insert((
                 Node {
-                    width: Val::Px(size.x),
-                    height: Val::Px(size.y),
-                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, shape.bounds().size().y as u16),
-                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, shape.bounds().size().x as u16),
+                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
+                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
                     ..Default::default()
                 },
             ));
@@ -232,20 +240,36 @@ fn update_inventory_node(
             // for all items still in set
             for new in items {
                 let shape = inventory.get_shape(new).expect("New items should all definityl be in inventory");
+                let size = shape.layout.size();
                 // spawn new ItemNode
-                commands.spawn((
+                let mut e = commands.spawn((
                     ItemNode(rendering),
                     RenderedItem {
                         item: new,
                     },
                     Node {
-                        grid_row: GridPlacement::start(shape.offset.y as i16 + 1),
-                        grid_column: GridPlacement::start(shape.offset.x as i16 + 1),
+                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
+                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
                         ..Default::default()
                     },
                     ChildOf(rendering),
                 ));
+                if let Some(p) = picicking {
+                    e.insert(p.clone());
+                }
             }
         }
+    }
+}
+
+fn style_inventory_node(
+    styles: InventoryStyler,
+    changed: Populated<(Entity, &mut Node), Or<(AssetChanged<InventoryStyleHandle>, Changed<InventoryStyleHandle>)>>
+) {
+    for (entity, mut node) in changed {
+        info!("Applying new style to: {}", entity);
+        let style = styles.style(entity);
+        node.grid_auto_columns = GridTrack::px(style.cell_size.x);
+        node.grid_auto_rows = GridTrack::px(style.cell_size.y);
     }
 }

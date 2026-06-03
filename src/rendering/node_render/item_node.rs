@@ -43,10 +43,5 @@ pub(super) fn update_item_node_image(
         let size = size.unwrap_or_else(|| item.bounds().size());
         // let size = style.cell_size * size.as_vec2();
         *transform = item.ui_transform();
-        transform.rotation = item.rotation();
-        node.grid_column.set_span(size.x as u16);
-        node.grid_row.set_span(size.y as u16);
-        node.width = Val::Percent((size.x * 100) as f32);
-        node.height = Val::Percent((size.y * 100) as f32);
     }
 } 

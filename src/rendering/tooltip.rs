@@ -50,6 +50,10 @@ fn spawn_tooltip(mut commands: Commands) {
         ToolTipRoot,
         GlobalZIndex(1),
         ThemeBackgroundColor(feathers::tokens::WINDOW_BG),
+        Pickable {
+            should_block_lower: true,
+            is_hoverable: false,
+        }
     ));
 }
 
@@ -112,8 +116,8 @@ impl ToolTip<'_, '_> {
 
     fn open(&mut self, location: Option<Vec2>) {
         if let Some(position) = location.or(self.cursor.cursor_position()) {
-            self.root.1.left = Val::Px(position.x);
-            self.root.1.top = Val::Px(position.y);
+            self.root.1.left = Val::Px(position.x + 10.);
+            self.root.1.top = Val::Px(position.y + 10.);
         }
         self.root.1.display = Display::Flex;
     }

@@ -1,4 +1,4 @@
-use bevy::ecs::system::SystemParam;
+use bevy::{asset::AsAssetId, ecs::system::SystemParam};
 
 use super::*;
 
@@ -18,6 +18,12 @@ pub struct InventoryStyleAsset {
 #[derive(Component, Deref)]
 pub struct InventoryStyleHandle(pub Handle<InventoryStyle>);
 
+impl AsAssetId for InventoryStyleHandle {
+    type Asset = InventoryStyle;
+    fn as_asset_id(&self) -> AssetId<Self::Asset> {
+        self.id()
+    }
+}
 
 impl Into<AssetId<InventoryStyle>> for &InventoryStyleHandle {
     fn into(self) -> AssetId<InventoryStyle> {
@@ -51,7 +57,8 @@ pub(crate) fn register_default_style(app: &mut App, default_style: Option<&Inven
 #[derive(SystemParam)]
 pub struct InventoryStyler<'w, 's> {
     styles: Res<'w, Assets<InventoryStyle>>,
-    inventorys: Query<'w, 's, &'static InventoryStyleHandle>,
+    has_style: Query<'w, 's, &'static InventoryStyleHandle>,
+    tree: Query<'w, 's, &'static ChildOf>,
 }
 
 impl InventoryStyler<'_, '_> {
@@ -60,13 +67,30 @@ impl InventoryStyler<'_, '_> {
         cell_icon: Handle::Uuid(AssetId::<Image>::DEFAULT_UUID, core::marker::PhantomData),
         background: None,
     };
+    #[inline]
     pub fn style(&self, entity: Entity) -> &InventoryStyle {
-        match self.inventorys.get(entity) {
-            Err(_) => self.get_default(),
-            Ok(handle) => self.styles.get(handle).unwrap_or_else(|| {
-                warn!("Style handle {:?} not found, falling back to default", handle.0);
+        self.get_style(&self.style_handle(entity))
+    }
+
+    pub fn get_style(&self, style: impl Into<AssetId<InventoryStyle>>) -> &InventoryStyle {
+        self.styles.get(style).unwrap_or_else(|| {
+                warn!("Style handle not found, falling back to default");
                 self.get_default()
             })
+    }
+
+    pub fn style_handle(&self, entity: Entity) -> Handle<InventoryStyle> {
+        let mut style = self.has_style.get(entity);
+        for e in self.tree.iter_ancestors(entity) {
+            if style.is_ok() {
+                break;
+            }
+            error!("Checking ancestors for style");
+            style = self.has_style.get(e);
+        }
+        match style {
+            Err(_) => Handle::default(),
+            Ok(handle) => handle.0.clone()
         }
     }
 

@@ -13,16 +13,11 @@ impl Into<AssetId<Inventory>> for &ItemInventory {
 }
 
 #[derive(Debug, Component, Reflect, Clone)]
-#[component(immutable, on_replace = Self::remove_from_inventory, on_insert = Self::added)]
+#[component(immutable, on_replace = Self::remove_from_inventory)]
 /// the inventory this item is in
 pub struct InInventory(pub AssetId<Inventory>, pub CellType);
 
 impl InInventory {
-    fn added(
-        mut world: DeferredWorld, ctx: HookContext
-    ) {
-        info!("Added InInv to {}", ctx.entity)
-    }
     fn remove_from_inventory(mut world: DeferredWorld, ctx: HookContext) {
         let Some(InInventory(inventory, _)) = world.get::<Self>(ctx.entity).cloned() else {
             error!("Entity {:?} does not have InInventory but it was removed", ctx.entity);  

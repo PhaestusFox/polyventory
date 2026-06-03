@@ -4,13 +4,16 @@ use crate::{interaction::{InventoryHandle, interactions::MoveItem}, prelude::*};
 #[cfg(feature = "mouse_interaction")]
 mod mouse;
 
+#[cfg(feature = "rendering")]
+mod visuals;
+
 pub struct CursorPlugin;
 
 impl Plugin for CursorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CursorInventory>();
         #[cfg(feature = "rendering")]
-        app.add_systems(Startup, spawn_cursor_icon);
+        app.add_plugins(visuals::plugin);
 
         app.add_observer(try_pickup);
         app.add_observer(try_drop);
@@ -36,6 +39,7 @@ impl InventoryCursor<'_, '_> {
         if let Some(origin) = &self.inventory.origin {
             let mut shape = origin.entry.clone();
             shape.offset = IVec2::ZERO;
+            trace!("Picking up item: {:?}", shape);
             self.commands.trigger(MoveItem::InsertItem {
                 item,
                 inventory: self.inventory.inventory.id(),
@@ -66,6 +70,10 @@ impl InventoryCursor<'_, '_> {
     pub fn last(&self) -> Option<(Entity, Shape)> {
         let inv = self.manager.read_inventory(self.inventory.as_ref()).expect("Cursor Inventory Always exists");
         inv.items().last().map(|(e, s)| (*e, s.shape.clone()))
+    }
+
+    pub fn set_style(&mut self, style: Handle<InventoryStyle>) {
+        self.commands.entity(self.entity()).insert(InventoryStyleHandle(style));
     }
 }
 
@@ -98,16 +106,6 @@ impl FromWorld for CursorInventory {
 #[derive(Component)]
 /// A marker for the entity that is set under the cursor when it holds and item
 pub struct CursorSlot;
-
-fn spawn_cursor_icon(mut commands: Commands, cursor: Res<CursorInventory>) {
-    commands.spawn((
-        CursorSlot,
-        Transform::default(),
-        Visibility::Visible,
-        Name::new("Cursor Slot"),
-        RenderedInventory::new(cursor.inventory.clone()),
-    ));
-}
 
 #[derive(Event)]
 /// Attempt to move this item into the cursor inventory, removing it from its current inventory if successful
