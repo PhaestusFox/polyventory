@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use bevy::{ecs::{lifecycle::HookContext, world::DeferredWorld}, prelude::*};
 use crate::prelude::*;
 
@@ -10,8 +12,6 @@ pub mod sprite_render;
 
 #[cfg(feature = "tooltips")]
 pub mod tooltip;
-
-pub mod interaction;
 mod style;
 
 pub mod render_prelude {
@@ -51,9 +51,6 @@ impl Plugin for InventoryRenderPlugin {
         app.add_plugins(node_render::InventoryNodePlugin {
             auto_require: matches!(self.pipeline, InventoryRenderPipeline::Node),
         });
-
-        #[cfg(feature = "interaction")]
-        app.add_plugins(interaction::InteractionPlugin);
     }
 }
 
@@ -65,6 +62,14 @@ pub struct RenderedInventory {
     inventory: Handle<Inventory>,
     #[relationship]
     slots: Vec<Entity>,
+}
+
+impl Debug for RenderedInventory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RenderedInventory")
+            .field("inventory", &self.inventory)
+            .finish()
+    }
 }
 
 impl RenderedInventory {

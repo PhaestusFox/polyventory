@@ -16,7 +16,7 @@ use strum::IntoEnumIterator;
 // mod slot;
 // pub use slot::*;
 
-use crate::inventory::{manager::AddFailed};
+use crate::inventory::manager::{AddFailed, FitFailed};
 
 mod inventory_descriptor;
 pub use inventory_descriptor::{InventoryDescriptor, InventoryDescriptorLoader};
@@ -103,7 +103,7 @@ impl Inventory {
         self.items.remove(&item)
     }
 
-    pub fn fit_item(&self, item_type: &ItemDescriptor) -> Option<(CellType, Shape)> {
+    pub fn fit_item(&self, item_type: &ItemDescriptor) -> Result<(CellType, Shape), FitFailed> {
         for (slot_type, item_layout) in item_type.sizes() {
             let Some(slot_layout) = self.slots.get(slot_type) else {
                 continue;
@@ -117,12 +117,12 @@ impl Inventory {
                 for cell in slot_layout.iter_cells() {
                     shape.offset = cell;
                     if self.can_fit(slot_type, &shape) {
-                        return Some((slot_type.clone(), shape));
+                        return Ok((slot_type.clone(), shape));
                     }
                 }
             }
         }
-        None
+        Err(FitFailed::Failed)
     }
 
     pub fn fit(&self, cell_type: &CellType, layout: &Layout) -> Option<Shape> {
@@ -152,6 +152,9 @@ impl Inventory {
         let Some(slot_shape) = self.slots.get(cell_type) else {
             return false;
         };
+        if let CellType::Any = cell_type && (item_shape.layout != Layout::Rect { size: UVec2::ONE }) {
+            return self.fit(cell_type, &Layout::Rect { size: UVec2::ONE }).is_some();
+        }
         if !slot_shape.can_fit(item_shape) {
             return false;
         }

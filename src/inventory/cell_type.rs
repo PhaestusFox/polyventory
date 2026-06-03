@@ -24,3 +24,12 @@ impl FromStr for CellType {
         }
     }
 }
+
+impl std::fmt::Display for CellType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CellType::Custom(custom) => write!(f, "{}", custom),
+            other => write!(f, "{other:?}"),
+        }
+    }
+}

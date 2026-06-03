@@ -100,11 +100,13 @@ impl FromWorld for LootTable {
             asset_server.load("items/backpack.item"),
             asset_server.load("items/backpack.item#SmallPocket"),
             asset_server.load("items/backpack.item#BigPocket"),
+            asset_server.load("items/tarp.item"),
         ];
-            let known = vec![
-                asset_server.load("items/battery_phone.item"),
-                asset_server.load("items/lighter.item"),
-            ];
+        let known = vec![
+            asset_server.load("items/tarp.item"),
+            asset_server.load("items/battery_phone.item"),
+            asset_server.load("items/lighter.item"),
+        ];
         Self { items, fixed: known }
     }
 }
@@ -186,6 +188,14 @@ fn spawn_inventory(
         }
     }
     let item = loot.fixed[1].clone();
+    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+        test_inventory.commands.entity(e).insert(ChildOf(container));
+        spawned += 1;
+        if spawned > 30 * 50 {
+            panic!("Too many items spawned, something is wrong");
+        }
+    }
+    let item = loot.fixed[2].clone();
     while let Ok(e) = test_inventory.spawn_item(item.clone()) {
         test_inventory.commands.entity(e).insert(ChildOf(container));
         spawned += 1;

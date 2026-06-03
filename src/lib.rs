@@ -3,7 +3,10 @@ use bevy::{
     prelude::*,
 };
 
+
 mod inventory;
+#[cfg(feature = "interaction")]
+mod interaction;
 #[cfg(feature = "rendering")]
 mod rendering;
 
@@ -45,6 +48,9 @@ impl Plugin for PolyventoryPlugin {
         app.register_type::<inventory::entry::Entry>();
         app.register_type::<crate::rendering::render_prelude::RenderedItem>();
         app.register_type::<crate::rendering::render_prelude::RenderingItem>();
+
+        #[cfg(feature = "interaction")]
+        app.add_plugins(interaction::InteractionPlugin);
     }
 }
 
