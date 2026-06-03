@@ -7,6 +7,7 @@ impl Plugin for MouseInventoryPlugin {
     fn build(&self, app: &mut App) {
         app.add_observer(detect_pickup);
         app.add_observer(detect_drop);
+        app.add_systems(First, follow_mouse);
     }
 }
 
@@ -70,6 +71,10 @@ fn detect_drop(
 
 fn follow_mouse(
     window: Single<&Window, With<PrimaryWindow>>,
-) {
-
+    mut cursor: Single<&mut UiTransform, With<CursorSlot>>,
+) {    
+    let Some(pos) = window.cursor_position() else {
+        return;
+    };
+    cursor.translation = Val2 { x: Val::Px(pos.x), y: Val::Px(pos.y) }
 }
