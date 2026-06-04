@@ -17,6 +17,7 @@ fn spawn_cursor_icon(mut commands: Commands, cursor: Res<CursorInventory>) {
             is_hoverable: false,
         },
         GlobalZIndex(1),
+        BackgroundColor(Color::linear_rgba(0.1, 0.1, 0.8, 0.33)),
     ));
 }
 

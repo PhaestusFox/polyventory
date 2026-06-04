@@ -92,12 +92,7 @@ impl Into<AssetId<Inventory>> for &CursorInventory {
 impl FromWorld for CursorInventory {
     fn from_world(world: &mut World) -> Self {
         let mut inventorys = world.resource_mut::<Assets<Inventory>>();
-        let mut inventory = Inventory::new("CursorInventory");
-        inventory.add_slot(CellType::Any, Shape {
-            offset: IVec2::ZERO,
-            orientation: Orientation::Deg0,
-            layout: Layout::Rect { size: UVec2::new(1, 1) },
-        });
+        let inventory = Inventory::new("CursorInventory");
         let inventory = inventorys.add(inventory);
         CursorInventory { inventory, origin: None }
     }
