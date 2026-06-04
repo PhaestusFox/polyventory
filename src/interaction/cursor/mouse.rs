@@ -15,6 +15,7 @@ fn detect_pickup(
     click: On<Pointer<Click>>,
     icons: Query<&RenderedItem>,
     mut commands: Commands,
+    manager: InventoryManager,
 ) {
     // skip if not Primary click
     if click.button != PointerButton::Primary {
@@ -23,8 +24,53 @@ fn detect_pickup(
     let Ok(rendered_item) = icons.get(click.entity) else {
         return;
     };
-    trace!("Clicked on item entity {:?} with item {:?}", click.entity, rendered_item.item);
-    commands.trigger(PickupItem(rendered_item.item));
+    let Some(pos) = click.hit.position else {
+        // if click does not have a position just return offset Zero
+        commands.trigger(PickupItem {
+            item: rendered_item.item,
+            offset: IVec2::ZERO,
+        });
+        return;
+    };
+    let pos = pos.truncate() + 0.5;
+
+    let Some(inventory_id) = manager.find_item(rendered_item.item) else {
+        // if item is not in an inventory just return Offset Zero
+        commands.trigger(PickupItem {
+            item: rendered_item.item,
+            offset: IVec2::ZERO,
+        });
+        return;
+    };
+
+    let Some(inventory) = manager.read_inventory(inventory_id) else {
+        warn!("Failed to open inventory {:?} for cursor drop", inventory_id);
+        return;
+    };
+    let Some(size) = inventory.get_shape(rendered_item.item) else {
+        warn!("Failed to find item in inventory");
+        return;
+    };
+
+    let clicked = match size.orientation {
+        Orientation::Deg0 => -(size.layout.size().as_vec2() * pos).as_ivec2(),
+        Orientation::Deg90 => {
+            let bounds = size.layout.bounds() * size.orientation;
+            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
+            ivec2(-bounds.max.x + p.y, -bounds.min.y - p.x)
+        },
+        Orientation::Deg180 => (size.layout.size().as_vec2() * pos).as_ivec2(),
+        Orientation::Deg270 => {
+            let bounds = size.layout.bounds() * size.orientation;
+            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
+            ivec2(-bounds.min.x - p.y, -bounds.max.y + p.x)
+        },
+    };
+    trace!("Clicked on item entity {:?} with item {:?}: {} = {:?}", click.entity, rendered_item.item, pos, clicked);
+    commands.trigger(PickupItem {
+        item: rendered_item.item,
+        offset: clicked,
+    });
 }
 
 fn detect_drop(
@@ -60,7 +106,7 @@ fn detect_drop(
     let clicked = (size.bounds().size().as_vec2() * pos).as_ivec2();
 
     let (item, mut shape) = cursor.last().expect("Cursor is not empty");
-    shape.offset = clicked;
+    shape.offset += clicked;
     commands.trigger(DropItem {
         inventory: inventory_id.id(),
         item,
@@ -72,9 +118,22 @@ fn detect_drop(
 fn follow_mouse(
     window: Single<&Window, With<PrimaryWindow>>,
     mut cursor: Single<&mut UiTransform, With<CursorSlot>>,
+    inv: InventoryCursor,
+    styles: InventoryStyler,
 ) {    
     let Some(pos) = window.cursor_position() else {
         return;
     };
-    cursor.translation = Val2 { x: Val::Px(pos.x), y: Val::Px(pos.y) }
+    let style = styles.style(inv.entity());
+    let mut x = pos.x - style.cell_size.x * 0.5;
+    let mut y = pos.y - style.cell_size.y * 0.5;
+    if let Some((_, shape)) = inv.last() {
+        if shape.offset.x.is_negative() {
+            x -= shape.offset.x.abs() as f32 * style.cell_size.x;
+        }
+        if shape.offset.y.is_negative() {
+            y -= shape.offset.y.abs() as f32 * style.cell_size.y;
+        }
+    }
+    cursor.translation = Val2 { x: Val::Px(x), y: Val::Px(y) }
 }

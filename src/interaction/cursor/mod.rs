@@ -32,13 +32,13 @@ pub struct InventoryCursor<'w, 's> {
 }
 
 impl InventoryCursor<'_, '_> {
-    pub fn hold(&mut self, item: Entity, origin: Option<InventoryHandle>) {
+    pub fn hold(&mut self, item: Entity, origin: Option<InventoryHandle>, offset: IVec2) {
         self.inventory.origin = origin;
         // let inv: AssetId<Inventory> = self.inventory.as_ref().into();
         // let mut inventory = self.manager.open_inventory(inv).expect("Cursor Inventory exists");
         if let Some(origin) = &self.inventory.origin {
             let mut shape = origin.entry.clone();
-            shape.offset = IVec2::ZERO;
+            shape.offset = offset;
             trace!("Picking up item: {:?}", shape);
             self.commands.trigger(MoveItem::InsertItem {
                 item,
@@ -109,7 +109,10 @@ pub struct CursorSlot;
 
 #[derive(Event)]
 /// Attempt to move this item into the cursor inventory, removing it from its current inventory if successful
-pub struct PickupItem(pub Entity);
+pub struct PickupItem {
+    item: Entity,
+    offset: IVec2,
+}
 
 #[derive(Event)]
 /// Attempt to move this item from the cursor inventory into the specified inventory, removing it from the cursor if successful
@@ -128,20 +131,20 @@ pub fn try_pickup(
     mut cursor: InventoryCursor,
 ) {
     if !cursor.is_empty() {
-        warn!("Attempted to pick up item {:?} while already holding an item", to.0);
+        warn!("Attempted to pick up item {:?} while already holding an item", to.item);
         return;
     }
-    let Ok(item) = items.get(to.0) else {
-        warn!("PickupItem event references an entity({:?}) that is not an item", to.0);
+    let Ok(item) = items.get(to.item) else {
+        warn!("PickupItem event references an entity({:?}) that is not an item", to.item);
         return;
     };
     // TODO add locked marker component so items can be locked in an inventory and not be picked up
 
 
     let origin: Option<InventoryHandle>;
-    if let Some(find) = cursor.manager.find_item(to.0)
+    if let Some(find) = cursor.manager.find_item(to.item)
     && let Some(inventory) = cursor.manager.read_inventory(find)
-    && let Some(entry) = inventory.get_shape(to.0) {
+    && let Some(entry) = inventory.get_shape(to.item) {
         origin = Some(InventoryHandle {
             inventory: find,
             entry: entry.clone(),
@@ -150,8 +153,8 @@ pub fn try_pickup(
         origin = None;
     }
 
-    cursor.hold(to.0, origin);
-    trace!("Picked up item {:?}", to.0);
+    cursor.hold(to.item, origin, to.offset);
+    trace!("Picked up item {:?}", to.item);
 }
 
 pub fn try_drop(

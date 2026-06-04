@@ -15,7 +15,8 @@ fn spawn_cursor_icon(mut commands: Commands, cursor: Res<CursorInventory>) {
         Pickable {
             should_block_lower: false,
             is_hoverable: false,
-        }
+        },
+        GlobalZIndex(1),
     ));
 }
 

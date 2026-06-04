@@ -54,13 +54,20 @@ fn spawn_inventory_node(
             let pos = shape.offset.as_vec2() * style.cell_size;
             size_max = size_max.max(pos + a_size);
             size_min = size_min.min(pos);
+            let mut offset = shape.offset;
+            if offset.x >= 0 {
+                offset.x += 1;
+            }
+            if offset.y >= 0 {
+                offset.y += 1;
+            }
             let mut e = commands.spawn((
                 SlotNode,
                 Node {
                     width: Val::Percent(100.),
                     height: Val::Percent(100.),
-                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
-                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
+                    grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
+                    grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
                     ..Default::default()
                 },
                 ImageNode {
@@ -79,18 +86,25 @@ fn spawn_inventory_node(
                 e.insert(p.clone());
             }
         }
-        node.width = Val::Px(size_max.x - size_min.x);
-        node.height = Val::Px(size_max.y - size_min.y);
+        // node.width = Val::Px(size_max.x - size_min.x);
+        // node.height = Val::Px(size_max.y - size_min.y);
         for (item, shape) in inventory.items() {
             let size = shape.layout.size();
+            let mut offset = shape.offset;
+            if offset.x >= 0 {
+                offset.x += 1;
+            }
+            if offset.y >= 0 {
+                offset.y += 1;
+            }
             let mut e = commands.spawn((
                 ItemNode(entity),
                 RenderedItem {
                     item: *item,
                 },
                 Node {
-                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
-                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
+                    grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
+                    grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
                     ..Default::default()
                 },
                 ChildOf(entity),
@@ -174,11 +188,18 @@ fn update_inventory_node(
                 let pos = shape.offset.as_vec2() * style.cell_size;
                 size_max = size_max.max(pos + gsize);
                 size_min = size_min.min(pos);
+                let mut offset = shape.offset;
+                if offset.x >= 0 {
+                    offset.x += 1;
+                }
+                if offset.y >= 0 {
+                    offset.y += 1;
+                }
                 let mut e = commands.spawn((
                     SlotNode,
                     Node {
-                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
-                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
+                        grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
+                        grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
                         ..Default::default()
                     },
                     ImageNode {
@@ -205,17 +226,24 @@ fn update_inventory_node(
                 let pos = shape.offset.as_vec2() * style.cell_size;
                 size_max = size_max.max(pos + gsize);
                 size_min = size_min.min(pos);
+                let mut offset = shape.offset;
+                if offset.x >= 0 {
+                    offset.x += 1;
+                }
+                if offset.y >= 0 {
+                    offset.y += 1;
+                }
                 commands.entity(slot).insert((
                 Node {
-                    grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
-                    grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
+                    grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
+                    grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
                     ..Default::default()
                 },
             ));
             }
 
-            node.width = Val::Px(size_max.x - size_min.x);
-            node.height = Val::Px(size_max.y - size_min.y);
+            // node.width = Val::Px(size_max.x - size_min.x);
+            // node.height = Val::Px(size_max.y - size_min.y);
 
             // TODO update items as well
 
@@ -236,11 +264,22 @@ fn update_inventory_node(
                     };
                 }
             }
-            info!("After processing existing items, need to spawn new nodes for items: {:?}", items);
             // for all items still in set
             for new in items {
                 let shape = inventory.get_shape(new).expect("New items should all definityl be in inventory");
                 let size = shape.layout.size();
+                let mut offset = shape.offset;
+                if offset.x >= 0 {
+                    offset.x += 1;
+                } else {
+                    offset.x -= 1;
+                }
+                if offset.y >= 0 {
+                    offset.y += 1;
+                } else {
+                    offset.y -= 1;
+                }
+                info!("New Offset {}", offset);
                 // spawn new ItemNode
                 let mut e = commands.spawn((
                     ItemNode(rendering),
@@ -248,8 +287,8 @@ fn update_inventory_node(
                         item: new,
                     },
                     Node {
-                        grid_row: GridPlacement::start_span(shape.offset.y as i16 + 1, size.y as u16),
-                        grid_column: GridPlacement::start_span(shape.offset.x as i16 + 1, size.x as u16),
+                        grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
+                        grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
                         ..Default::default()
                     },
                     ChildOf(rendering),
