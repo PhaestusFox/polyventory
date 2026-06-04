@@ -53,13 +53,23 @@ fn detect_pickup(
     };
 
     let clicked = match size.orientation {
-        Orientation::Deg0 => -(size.layout.size().as_vec2() * pos).as_ivec2(),
+        Orientation::Deg0 => {
+            let bounds = size.layout.bounds();
+            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
+            bounds.min - p
+        },
         Orientation::Deg90 => {
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             ivec2(-bounds.max.x + p.y, -bounds.min.y - p.x)
         },
-        Orientation::Deg180 => (size.layout.size().as_vec2() * pos).as_ivec2(),
+        Orientation::Deg180 => {
+            let bounds = size.layout.bounds();
+            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
+            dbg!(p);
+            dbg!(size.layout.size());
+            p - bounds.max
+        },
         Orientation::Deg270 => {
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();

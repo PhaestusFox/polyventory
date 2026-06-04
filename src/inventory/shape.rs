@@ -48,30 +48,33 @@ impl Shape {
     }
 
     pub fn ui_transform(&self) -> UiTransform {
+        let og = self.layout.size().as_vec2();
         let size = self.bounds().size().as_vec2();
         // 90 degree 
         // u = x - y / y * 0.5
         // v = -(x + y - 2) / x * 0.5
 
-        let t = match self.orientation {
-            Orientation::Deg0 => Val2::ZERO,
-            Orientation::Deg90 => Val2::new(
-                Val::Percent((size.x - size.y) / size.y * 50.0),
-                Val::Percent(-(size.x + size.y - 2.) / size.x * 50.),
-            ),
-            Orientation::Deg180 => Val2::new(
-                Val::Percent((-size.x + 1.) / size.x * 100.),
-                Val::Percent((-size.y + 1.) / size.y * 100.),
-            ),
-            Orientation::Deg270 =>Val2::new(
-                Val::Percent(-(size.x + size.y - 2.) / size.y * 50.),
-                Val::Percent((size.y - size.x) / size.x * 50.),
-            ),
-        };
+        let scale = og/size;
+
+        // let t = match self.orientation {
+        //     Orientation::Deg0 => Val2::ZERO,
+        //     Orientation::Deg90 => Val2::new(
+        //         Val::Percent((size.x - size.y) / size.y * 50.0),
+        //         Val::Percent(-(size.x + size.y - 2.) / size.x * 50.),
+        //     ),
+        //     Orientation::Deg180 => Val2::new(
+        //         Val::Percent((-size.x + 1.) / size.x * 100.),
+        //         Val::Percent((-size.y + 1.) / size.y * 100.),
+        //     ),
+        //     Orientation::Deg270 =>Val2::new(
+        //         Val::Percent(-(size.x + size.y - 2.) / size.y * 50.),
+        //         Val::Percent((size.y - size.x) / size.x * 50.),
+        //     ),
+        // };
         UiTransform {
-            translation: t,
+            translation: Val2::default(),
             rotation: self.rotation(),
-            ..Default::default()
+            scale: scale
         }
     }
 }
@@ -89,9 +92,9 @@ impl Orientation {
     pub fn apply(&self, cell: IVec2) -> IVec2 {
         match self {
             Orientation::Deg0 => cell,
-            Orientation::Deg90 => IVec2::new(cell.y, -cell.x),
-            Orientation::Deg180 => IVec2::new(-cell.x, -cell.y),
-            Orientation::Deg270 => IVec2::new(-cell.y, cell.x),
+            Orientation::Deg90 => IVec2::new(cell.y, cell.x),
+            Orientation::Deg180 => cell,
+            Orientation::Deg270 => IVec2::new(cell.y, cell.x),
         }
     }
 }

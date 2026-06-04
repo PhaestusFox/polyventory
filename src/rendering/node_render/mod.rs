@@ -102,11 +102,6 @@ fn spawn_inventory_node(
                 RenderedItem {
                     item: *item,
                 },
-                Node {
-                    grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
-                    grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
-                    ..Default::default()
-                },
                 ChildOf(entity),
             ));
             if let Some(p) = pickable {
@@ -267,7 +262,7 @@ fn update_inventory_node(
             // for all items still in set
             for new in items {
                 let shape = inventory.get_shape(new).expect("New items should all definityl be in inventory");
-                let size = shape.layout.size();
+                let size = shape.bounds().size();
                 let mut offset = shape.offset;
                 if offset.x >= 0 {
                     offset.x += 1;

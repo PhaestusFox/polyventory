@@ -40,8 +40,22 @@ pub(super) fn update_item_node_image(
             warn!("Item entity {:?} not found in inventory {:?}", displayed.item, in_inventory.0);
             continue;
         };
-        let size = size.unwrap_or_else(|| item.bounds().size());
+        // let size = size.unwrap_or_else(|| item.bounds().size());
+        let size = item.bounds().size();
+        let mut offset = item.offset;
+        if item.offset.x.is_negative() {
+            offset.x -= 1;
+        } else {
+            offset.x += 1;
+        }
+        if item.offset.y.is_negative() {
+            offset.y -= 1;
+        } else {
+            offset.y += 1;
+        }
         // let size = style.cell_size * size.as_vec2();
         *transform = item.ui_transform();
+        node.grid_row = GridPlacement::start_span(offset.y as i16, size.y as u16);
+        node.grid_column = GridPlacement::start_span(offset.x as i16, size.x as u16);
     }
 } 
