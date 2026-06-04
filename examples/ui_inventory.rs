@@ -40,7 +40,7 @@ fn main() {
     app.add_systems(OnExit(Loaded::False), spawn_inventory);
     app.init_state::<Loaded>();
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
-    app.add_plugins(bevy_inspector_egui::quick::AssetInspectorPlugin::<polyventory::prelude::Inventory>::default());
+    app.add_plugins(polyventory::egui_inspector::InventoryInspectorPlugin::default());
     
 
     app.add_systems(Update, kill);
@@ -121,7 +121,7 @@ fn spawn_inventory(
     let mut test_inventory = Inventory::new("Ui Inventory");
     test_inventory.add_slot(CellType::Untyped, Shape {
         offset: IVec2::ZERO,
-        orientation: Orientation::Deg0,
+        orientation: Orientation::DEG0,
         layout: Layout::Rect { size: UVec2::new(30, 50) },
     });
     let s = &mut inventory_manager;
@@ -138,7 +138,7 @@ fn spawn_inventory(
         }
     };
     test_inventory.commands.entity(bottle).insert(ChildOf(item_container));
-    match test_inventory.spawn_item_at(empty_bottle, IVec2::new(0, 0), Orientation::Deg180) {
+    match test_inventory.spawn_item_at(empty_bottle, IVec2::new(0, 0), Orientation::DEG180) {
         Ok(e) => {
             test_inventory.commands.entity(e).insert(ChildOf(item_container));
         },
@@ -151,23 +151,23 @@ fn spawn_inventory(
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
         IVec2::new(1, 8),
-        Orientation::Deg270,
+        Orientation::DEG270,
     );
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::Deg90);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::DEG90);
     info!("Spawning water bottle at 1,8 with 90 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 7), Orientation::Deg180);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 7), Orientation::DEG180);
     info!("Spawning water bottle at 1,7 with 180 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::Deg270);
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::DEG270);
     info!("Spawning water bottle at 3,9 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    let rotations = [Orientation::Deg270];
+    let rotations = [Orientation::DEG0, Orientation::DEG90, Orientation::DEG180, Orientation::DEG270];
     let mut spawned = 0;
-    while spawned < 15 {
+    while spawned < 50 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         let orientation = *rotations.choose(&mut rng).expect("At least one orientation");
         match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..30), rng.random_range(0..50)), orientation) {
@@ -178,31 +178,31 @@ fn spawn_inventory(
             Err(f) => error!("Failed to spawn random item: {:?}", f),
         }
     }
-    let item = loot.fixed[0].clone();
-    let container = test_inventory.commands.spawn(Name::new("fill")).id();
-    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
-        test_inventory.commands.entity(e).insert(ChildOf(container));
-        spawned += 1;
-        if spawned > 30 * 50 {
-            panic!("Too many items spawned, something is wrong");
-        }
-    }
-    let item = loot.fixed[1].clone();
-    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
-        test_inventory.commands.entity(e).insert(ChildOf(container));
-        spawned += 1;
-        if spawned > 30 * 50 {
-            panic!("Too many items spawned, something is wrong");
-        }
-    }
-    let item = loot.fixed[2].clone();
-    while let Ok(e) = test_inventory.spawn_item(item.clone()) {
-        test_inventory.commands.entity(e).insert(ChildOf(container));
-        spawned += 1;
-        if spawned > 30 * 50 {
-            panic!("Too many items spawned, something is wrong");
-        }
-    }
+    // let item = loot.fixed[0].clone();
+    // let container = test_inventory.commands.spawn(Name::new("fill")).id();
+    // while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+    //     test_inventory.commands.entity(e).insert(ChildOf(container));
+    //     spawned += 1;
+    //     if spawned > 30 * 50 {
+    //         panic!("Too many items spawned, something is wrong");
+    //     }
+    // }
+    // let item = loot.fixed[1].clone();
+    // while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+    //     test_inventory.commands.entity(e).insert(ChildOf(container));
+    //     spawned += 1;
+    //     if spawned > 30 * 50 {
+    //         panic!("Too many items spawned, something is wrong");
+    //     }
+    // }
+    // let item = loot.fixed[2].clone();
+    // while let Ok(e) = test_inventory.spawn_item(item.clone()) {
+    //     test_inventory.commands.entity(e).insert(ChildOf(container));
+    //     spawned += 1;
+    //     if spawned > 30 * 50 {
+    //         panic!("Too many items spawned, something is wrong");
+    //     }
+    // }
 
     commands.spawn((
         Name::new("Player"),
