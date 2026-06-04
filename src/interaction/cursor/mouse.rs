@@ -115,7 +115,7 @@ fn detect_drop(
     let clicked = (size.bounds().size().as_vec2() * pos).as_ivec2();
 
     let (item, mut shape) = cursor.last().expect("Cursor is not empty");
-    shape.offset += clicked;
+    shape.offset += clicked + size.offset;
     commands.trigger(DropItem {
         inventory: inventory_id.id(),
         item,

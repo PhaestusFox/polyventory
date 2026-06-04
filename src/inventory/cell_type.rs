@@ -33,3 +33,9 @@ impl std::fmt::Display for CellType {
         }
     }
 }
+
+impl CellType {
+    pub fn custom(id: impl Into<Arc<str>>) -> Self {
+        Self::Custom(id.into())
+    }
+}

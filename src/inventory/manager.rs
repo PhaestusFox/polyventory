@@ -32,8 +32,11 @@ impl InventoryManager<'_, '_> {
         })
     }
 
-    pub fn create_inventory(&mut self, inventory: Inventory) -> Handle<Inventory> {
-        self.inventory_assets.add(inventory)
+    pub fn create_inventory(&mut self, name: impl Into<String>) -> (Handle<Inventory>, InventoryCommands<'_, '_, '_>) {
+        let inv = Inventory::new(name);
+        let h = self.inventory_assets.add(inv);
+        let id = h.id();
+        (h, self.open_inventory(id).expect("Just Added"))
     }
 
     pub fn find_item(&self, item: Entity) -> Option<AssetId<Inventory>> {

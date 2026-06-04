@@ -92,17 +92,12 @@ fn spawn_inventory(
     mut inventory_manager: InventoryManager,
     loot: Res<LootTable>,
 ) {
-    let mut test_inventory = Inventory::new("Test Inventory");
+    let (test_inventory_handle, mut test_inventory) = inventory_manager.create_inventory("Test Inventory");
     test_inventory.add_slot(CellType::Untyped, Shape {
         offset: IVec2::ZERO,
         orientation: Orientation::DEG0,
         layout: Layout::Rect { size: UVec2::new(5, 7) },
     });
-    let s = &mut inventory_manager;
-    let test_inventory_handle = s.create_inventory(test_inventory);
-    let mut test_inventory = s
-        .open_inventory(&test_inventory_handle)
-        .expect("Just created Inventory");
     let empty_bottle = loot.items[0].clone();
     let r = test_inventory.spawn_item(empty_bottle);
     info!("Spawning empty bottle: {:?}", r);
