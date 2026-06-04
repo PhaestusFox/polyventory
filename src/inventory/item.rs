@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{hash::{Hash, Hasher}, str::FromStr};
 
 use bevy::{
     asset::{AssetLoader, AsyncReadExt},
@@ -57,6 +57,7 @@ pub struct ItemDescriptor {
     description: Option<String>,
     size: Vec<(CellType, Layout)>,
     image: IndexMap<CellType, (Handle<Image>, UVec2)>,
+    tint: IndexMap<CellType, Color>,
     sub_inventory: Option<Handle<InventoryDescriptor>>,
 }
 
@@ -112,6 +113,10 @@ impl ItemDescriptor {
         const FALL_BACK: (CellType, Layout) = (CellType::Any, Layout::Rect { size: UVec2::new(1, 1) });
         self.size.iter().chain(&[FALL_BACK])
     }
+
+    pub fn tint(&self, cell: &CellType) -> Option<Color> {
+        self.tint.get(cell).cloned().or_else(|| self.tint.first().map(|(_, s)| *s))
+    } 
 }
 
 #[derive(TypePath, Default)]
@@ -169,6 +174,9 @@ pub enum LoadItemDescriptorError {
     #[error("Failed to parse item descriptor file")]
     ParseError(String),
 
+    #[error("Missing `:` that splits cell for data")]
+    MissingColin,
+
     #[error("Line missing slot type")]
     MissingSlotType,
     #[error("Missing Size: {0}")]
@@ -177,6 +185,8 @@ pub enum LoadItemDescriptorError {
     InvalidSize(&'static str, String),
     #[error("Missing Image path")]
     MissingImagePath,
+    #[error("Invalid Color")]
+    FailedToParseColor,
 
     #[error("Entity does not have an Item component")]
     NoItemInDescriptor,
@@ -195,6 +205,7 @@ fn load_item_descriptor(
     let mut mode = Mode::Name;
     let mut description: Option<String> = None;
     let mut sub_inventory: Option<Handle<InventoryDescriptor>> = None;
+    let mut tints: IndexMap<CellType, Color> = IndexMap::new();
     let mut lines = data.lines().peekable();
     while let Some(line) = lines.next() {
         let line = line.trim();
@@ -239,6 +250,14 @@ fn load_item_descriptor(
                 let i = crate::inventory::inventory_descriptor::InventoryDescriptor::from_str(&inv_data)?;
                 sub_inventory = Some(ctx.add_labeled_asset(format!("{}.inventory", name), i));
             }
+            Mode::Tint => {
+                let Some((cell, rest)) = line.split_once(':') else {
+                    return Err(LoadItemDescriptorError::MissingColin);
+                };
+                let cell = CellType::from_str(cell).expect("Infallible");
+                let color = parse_color(rest).ok_or(LoadItemDescriptorError::FailedToParseColor)?;
+                tints.insert(cell, color);
+            },
             _ => {
                 mode.parse_line(line, &mut name, &mut size, &mut image, ctx)?;
             }
@@ -251,6 +270,7 @@ fn load_item_descriptor(
         size,
         image,
         sub_inventory,
+        tint: tints,
     };
 
     Ok(item)
@@ -260,21 +280,24 @@ fn set_mode(line: &str, mode: &mut Mode) -> bool {
     let line = line.to_lowercase();
     if line.starts_with("name") {
         *mode = Mode::Name;
-        return false;
+        false
     } else if line.starts_with("size") {
         *mode = Mode::Size;
-        return true;
+        true
     } else if line.starts_with("image") {
         *mode = Mode::Image;
-        return true;
+        true
     } else if line.starts_with("description") {
         *mode = Mode::Description;
-        return true;
+        true
     } else if line.starts_with("inventory") {
         *mode = Mode::Inventory;
-        return false;
-    } else  {
-        return false;
+        false
+    } else if line.starts_with("tint") {
+        *mode = Mode::Tint;
+        true
+    } else {
+        false
     }
 }
 
@@ -285,6 +308,7 @@ enum Mode {
     Name,
     Description,
     Inventory,
+    Tint,
 }
 
 impl Mode {
@@ -398,4 +422,41 @@ impl Mode {
             (path.to_string(), UVec2::new(x, y)),
         ))
     }
+}
+
+fn parse_color(color: &str) -> Option<Color> {
+    let color = color.trim();
+    if color.starts_with('#') {
+        unimplemented!("Hex Color parsing is not done yet");
+    }
+    if color.starts_with(|c: char| c.is_numeric()) {
+        unimplemented!("Raw color paring is not done yet");
+    }
+    use bevy::color::palettes::basic::*;
+    Some(match color.to_ascii_uppercase().as_ref() {
+        "AQUA" => AQUA,
+        "BLACK" => BLACK,
+        "BLUE" => BLUE,
+        "FUCHSIA" => FUCHSIA,
+        "GRAY" => GRAY,
+        "GREEN" => GREEN,
+        "LIME" => LIME,
+        "MAROON" => MAROON,
+        "NAVY" => NAVY,
+        "OLIVE" => OLIVE,
+        "PURPLE" => PURPLE,
+        "RED" => RED,
+        "SILVER" => SILVER,
+        "TEAL" => TEAL,
+        "WHITE" => WHITE,
+        "YELLOW" => YELLOW,
+        other => {
+            let mut m = std::hash::DefaultHasher::default();
+            other.hash(&mut m);
+            let id = m.finish() as i64;
+            let a = id & 0xFF - (id >> 8) & 0x1FF;
+            let b = (id >> 17) & 0xFF - (id >> 26) & 0x1FF;
+            Color::oklab(1., a as f32 / 256., b as f32 / 256.).to_srgba()
+        },
+    }.into())
 }

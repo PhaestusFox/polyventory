@@ -39,6 +39,9 @@ pub(super) fn update_item_node_image(
             warn!("Inventory asset {:?} not found for item entity {:?}", in_inventory.0, displayed.item);
             continue;
         };
+        if let Some(tint) = descriptor.tint(&in_inventory.1) {
+            image.color = tint;
+        }
         let Some(item) = inventory.get_shape(displayed.item) else {
             warn!("Item entity {:?} not found in inventory {:?}", displayed.item, in_inventory.0);
             continue;
