@@ -249,12 +249,16 @@ fn update_inventory_node(
                 for item in item_nodes.iter() {
                     //get RenderedItem from ItemNode
                     let Ok(target) = render_nodes.get(item) else {
-                        warn!("Failed to get RenderedItem component for entity {:?} while updating inventory node for Inventory asset {:?}", item, id);
+                        trace!("Failed to get RenderedItem component for entity {:?} while updating inventory node for Inventory asset {:?}", item, id);
                         continue;
                     };
-                    // remove already existing items from the set
-                    if !items.remove(&target.item) {
-                        warn!("Despawning ItemNode entity {:?} for removed item in Inventory asset {:?}", item, id);
+                    if items.remove(&target.item) {
+                        commands.entity(item).insert(RenderedItem {
+                            item: target.item,
+                        });
+                    } else {
+                        // remove already existing items from the set
+                        trace!("Despawning ItemNode entity {:?} for removed item in Inventory asset {:?}", item, id);
                         commands.entity(item).despawn();
                     };
                 }
@@ -280,11 +284,6 @@ fn update_inventory_node(
                     ItemNode(rendering),
                     RenderedItem {
                         item: new,
-                    },
-                    Node {
-                        grid_row: GridPlacement::start_span(offset.y as i16, size.y as u16),
-                        grid_column: GridPlacement::start_span(offset.x as i16, size.x as u16),
-                        ..Default::default()
                     },
                     ChildOf(rendering),
                 ));

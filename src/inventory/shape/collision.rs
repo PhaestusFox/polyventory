@@ -133,19 +133,19 @@ fn rotation_test() {
         min: IVec2::new(-1, -1),
         max: IVec2::new(1, 1),
     };
-    box1 *= Orientation::Deg90;
+    box1 *= Orientation::DEG90;
     assert_eq!(box1.min, IVec2::new(-1, -1));
     assert_eq!(box1.max, IVec2::new(1, 1));
     box1 += IVec2::new(1, 1);
     assert_eq!(box1.min, IVec2::new(0, 0));
     assert_eq!(box1.max, IVec2::new(2, 2));
-    box1 *= Orientation::Deg90;
+    box1 *= Orientation::DEG90;
     assert_eq!(box1.min, IVec2::new(0, 0));
     assert_eq!(box1.max, IVec2::new(2, 2));
-    box1 *= Orientation::Deg180;
+    box1 *= Orientation::DEG90;
     assert!(box1.min == IVec2::new(0, 0));
     assert!(box1.max == IVec2::new(2, 2));
-    box1 *= Orientation::Deg90;
+    box1 *= Orientation::DEG90;
     assert!(box1.min == IVec2::new(0, 0));
     assert!(box1.max == IVec2::new(2, 2));
 
@@ -153,16 +153,16 @@ fn rotation_test() {
         min: IVec2::new(1, 1),
         max: IVec2::new(1, 1),
     };
-    box2 *= Orientation::Deg90;
+    box2 *= Orientation::DEG90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
-    box2 *= Orientation::Deg90;
+    box2 *= Orientation::DEG90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
-    box2 *= Orientation::Deg90;
+    box2 *= Orientation::DEG90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
-    box2 *= Orientation::Deg90;
+    box2 *= Orientation::DEG90;
     assert_eq!(box2.min, IVec2::new(1, 1));
     assert_eq!(box2.max, IVec2::new(1, 1));
 
@@ -170,22 +170,22 @@ fn rotation_test() {
         min: IVec2::new(0, 0),
         max: IVec2::new(3, 1),
     };
-    box3 *= Orientation::Deg90;
+    box3 *= Orientation::DEG90;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(1, 3));
-    box3 *= Orientation::Deg90;
+    box3 *= Orientation::DEG90;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(3, 1));
-    box3 *= Orientation::Deg90;
+    box3 *= Orientation::DEG90;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(1, 3));
-    box3 *= Orientation::Deg90;
+    box3 *= Orientation::DEG90;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(3, 1));
-    box3 *= Orientation::Deg180;
+    box3 *= Orientation::DEG180;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(3, 1));
-    box3 *= Orientation::Deg270;
+    box3 *= Orientation::DEG270;
     assert_eq!(box3.min, IVec2::new(0, 0));
     assert_eq!(box3.max, IVec2::new(1, 3));
 }
@@ -252,7 +252,7 @@ fn collision_test() {
     assert!(box3 == box4);
     // bottle is inside bag
     assert!(bottle < bag);
-    let fbottle = bottle * Orientation::Deg180;
+    let fbottle = bottle * Orientation::DEG180;
     // bottle is not inside bag when rotated 180 degrees
     assert_fl!(fbottle < bag, "{:?} should not fit in {:?}", fbottle, bag);
     // bottle is not outside bag when rotated 180 degrees
@@ -282,7 +282,7 @@ fn water_then_backpack() {
     let water = AabbBox {
         min: IVec2::new(0, 0),
         max: IVec2::new(0, 3),
-    } * Orientation::Deg90 + IVec2::new(3, 9);
+    } * Orientation::DEG90 + IVec2::new(3, 9);
     let backpack = AabbBox {
         min: IVec2::new(0, 0),
         max: IVec2::new(12, 14),

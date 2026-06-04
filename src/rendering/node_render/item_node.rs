@@ -1,7 +1,10 @@
 use super::*;
 
 #[derive(Component)]
-#[require(Node, ImageNode)]
+#[require(Node, ImageNode, Pickable = Pickable {
+    should_block_lower: false,
+    is_hoverable: true,
+})]
 #[relationship(relationship_target = ItemNodes)]
 pub struct ItemNode(pub Entity);
 

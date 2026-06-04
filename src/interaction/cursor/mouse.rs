@@ -1,4 +1,4 @@
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{input::mouse::AccumulatedMouseScroll, prelude::*, window::PrimaryWindow};
 use super::*;
 
 pub struct MouseInventoryPlugin;
@@ -8,6 +8,7 @@ impl Plugin for MouseInventoryPlugin {
         app.add_observer(detect_pickup);
         app.add_observer(detect_drop);
         app.add_systems(First, follow_mouse);
+        app.add_systems(Update, rotate_item);
     }
 }
 
@@ -52,28 +53,26 @@ fn detect_pickup(
         return;
     };
 
-    let clicked = match size.orientation {
-        Orientation::Deg0 => {
-            let bounds = size.layout.bounds();
-            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
-            bounds.min - p
-        },
-        Orientation::Deg90 => {
+    let clicked = match size.orientation.intersection(Orientation::DEG270).bits() {
+        0b01 => {
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             ivec2(-bounds.max.x + p.y, -bounds.min.y - p.x)
         },
-        Orientation::Deg180 => {
+        0b10 => {
             let bounds = size.layout.bounds();
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
-            dbg!(p);
-            dbg!(size.layout.size());
             p - bounds.max
         },
-        Orientation::Deg270 => {
+        0b11 => {
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             ivec2(-bounds.min.x - p.y, -bounds.max.y + p.x)
+        },
+        _ => {
+            let bounds = size.layout.bounds();
+            let p = (size.layout.size().as_vec2() * pos).as_ivec2();
+            bounds.min - p
         },
     };
     trace!("Clicked on item entity {:?} with item {:?}: {} = {:?}", click.entity, rendered_item.item, pos, clicked);
@@ -90,7 +89,7 @@ fn detect_drop(
     icons: Query<&RenderedInventory>,
     slot: Query<&RenderedSlot>,
 ) {
-    if cursor.is_empty() {
+    if !cursor.can_drop() {
         return;
     }
     let Ok(slot) = slot.get(click.entity) else {
@@ -146,4 +145,24 @@ fn follow_mouse(
         }
     }
     cursor.translation = Val2 { x: Val::Px(x), y: Val::Px(y) }
+}
+
+fn rotate_item(
+    mut commands: Commands,
+    cursor: InventoryCursor,
+    mouse_wheel: Res<AccumulatedMouseScroll>,
+) {
+    if cursor.is_empty() {
+        return;
+    }
+    let rot = mouse_wheel.delta.y as i32 % 4;
+    if rot.is_positive() {
+        for _ in 0..rot {
+            commands.trigger(super::OrientateItem::ClockWise);
+        }
+    } else if rot.is_negative() {
+        for _ in 0..rot.abs() {
+            commands.trigger(super::OrientateItem::CounterClockWise);
+        }
+    }
 }

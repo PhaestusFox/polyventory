@@ -3,9 +3,13 @@ use bevy::prelude::*;
 mod collision;
 pub use collision::AabbBox;
 
+mod orientation;
+pub use orientation::{Orientation, Operations};
+
 #[derive(Reflect, Default, Debug, Clone)]
 pub struct Shape {
     pub offset: IVec2,
+    #[reflect(ignore)]
     pub orientation: Orientation,
     pub layout: Layout,
 }
@@ -39,12 +43,7 @@ impl Shape {
     }
 
     pub fn rotation(&self) -> Rot2 {
-        match self.orientation {
-            Orientation::Deg0 => Rot2::IDENTITY,
-            Orientation::Deg90 => Rot2::degrees(90.0),
-            Orientation::Deg180 => Rot2::degrees(180.0),
-            Orientation::Deg270 => Rot2::degrees(270.0),
-        }
+        Rot2::degrees(self.orientation.degrees())
     }
 
     pub fn ui_transform(&self) -> UiTransform {
@@ -57,16 +56,16 @@ impl Shape {
         let scale = og/size;
 
         // let t = match self.orientation {
-        //     Orientation::Deg0 => Val2::ZERO,
-        //     Orientation::Deg90 => Val2::new(
+        //     Orientation::DEG0 => Val2::ZERO,
+        //     Orientation::DEG90 => Val2::new(
         //         Val::Percent((size.x - size.y) / size.y * 50.0),
         //         Val::Percent(-(size.x + size.y - 2.) / size.x * 50.),
         //     ),
-        //     Orientation::Deg180 => Val2::new(
+        //     Orientation::DEG180 => Val2::new(
         //         Val::Percent((-size.x + 1.) / size.x * 100.),
         //         Val::Percent((-size.y + 1.) / size.y * 100.),
         //     ),
-        //     Orientation::Deg270 =>Val2::new(
+        //     Orientation::DEG270 =>Val2::new(
         //         Val::Percent(-(size.x + size.y - 2.) / size.y * 50.),
         //         Val::Percent((size.y - size.x) / size.x * 50.),
         //     ),
@@ -79,25 +78,6 @@ impl Shape {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect, Default, strum_macros::EnumIter)]
-pub enum Orientation {
-    #[default]
-    Deg0,
-    Deg90,
-    Deg180,
-    Deg270,
-}
-
-impl Orientation {
-    pub fn apply(&self, cell: IVec2) -> IVec2 {
-        match self {
-            Orientation::Deg0 => cell,
-            Orientation::Deg90 => IVec2::new(cell.y, cell.x),
-            Orientation::Deg180 => cell,
-            Orientation::Deg270 => IVec2::new(cell.y, cell.x),
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Reflect)]
 pub enum Layout {

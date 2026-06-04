@@ -62,7 +62,7 @@ impl Inventory {
             let shape = Shape {
                 layout: layout.clone(),
                 offset: IVec2::ZERO,
-                orientation: Orientation::Deg0,
+                orientation: Orientation::DEG0,
             };
             if self.can_fit(slot_type, &shape) {
                 info!("Added {} to inventory: {:?}", item_type.name(), shape);
@@ -108,7 +108,7 @@ impl Inventory {
             let Some(slot_layout) = self.slots.get(slot_type) else {
                 continue;
             };
-            for orientation in Orientation::iter() {
+            for orientation in Orientation::iter_orientations() {
                 let mut shape = Shape {
                     layout: item_layout.clone(),
                     offset: IVec2::ZERO,
@@ -132,11 +132,11 @@ impl Inventory {
         let mut shape = Shape {
             layout: layout.clone(),
             offset: IVec2::ZERO,
-            orientation: Orientation::Deg0,
+            orientation: Orientation::DEG0,
         };
         for cell in slot_layout.iter_cells() {
             shape.offset = cell;
-            for oroientation in Orientation::iter() {
+            for oroientation in Orientation::iter_orientations() {
                 shape.orientation = oroientation;
                 if self.can_fit(cell_type, &shape) {
                     println!("Found fit @ {:?} by {:?}", shape.offset, oroientation);
@@ -201,6 +201,10 @@ impl Inventory {
 
     pub fn get_shape(&self, item: Entity) -> Option<&Shape> {
         self.items.get(&item).map(|entry| &entry.shape)
+    }
+
+    pub fn get_shape_mut(&mut self, item: Entity) -> Option<&mut Shape> {
+        self.items.get_mut(&item).map(|entry| &mut entry.shape)
     }
 
     pub fn find(&self, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<FoundItem> {

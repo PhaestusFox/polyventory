@@ -230,6 +230,14 @@ impl InventoryCommands<'_, '_, '_> {
         self.commands.entity(item).insert(InInventory(self.inv_id, cell));
         self.modified = true
     }
+
+    pub fn get_shape_mut(&mut self, item: Entity) -> Option<&mut Shape> {
+        let out = self.current_inventory.get_shape_mut(item);
+        if out.is_some() {
+            self.modified = true;
+        }
+        out
+    }
 }
 
 impl core::ops::Deref for InventoryCommands<'_, '_, '_> {

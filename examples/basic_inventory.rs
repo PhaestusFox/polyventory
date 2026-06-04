@@ -95,7 +95,7 @@ fn spawn_inventory(
     let mut test_inventory = Inventory::new("Test Inventory");
     test_inventory.add_slot(CellType::Untyped, Shape {
         offset: IVec2::ZERO,
-        orientation: Orientation::Deg0,
+        orientation: Orientation::DEG0,
         layout: Layout::Rect { size: UVec2::new(5, 7) },
     });
     let s = &mut inventory_manager;
@@ -110,13 +110,13 @@ fn spawn_inventory(
     let r = test_inventory.spawn_item_at(
         water_bottle.clone(),
         IVec2::new(1, 8),
-        Orientation::Deg0,
+        Orientation::DEG0,
     );
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle, IVec2::new(1, 8), Orientation::Deg270);
+    let r = test_inventory.spawn_item_at(water_bottle, IVec2::new(1, 8), Orientation::DEG270);
     info!("Spawning water bottle at 1,8 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
