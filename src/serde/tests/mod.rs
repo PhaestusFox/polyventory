@@ -79,7 +79,7 @@ fn serializer_test() {
 
     ser.serialize_reflect(obj.as_reflect()).expect("to serialize");
 
-    assert_eq!(test_str, include_str!("struct.comp"))
+    assert_eq!(test_str, load_test_file!("struct.comp"), "{} != {}", test_str, include_str!("struct.comp"))
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn serializer_marker() {
 
     ser.serialize_reflect(obj.as_reflect()).expect("to serialize");
 
-    assert_eq!(test_str, include_str!("marker.comp"))
+    assert_eq!(test_str, load_test_file!("marker.comp"), "{} != {}", test_str, load_test_file!("marker.comp"))
 }
 
 #[test]
@@ -120,4 +120,24 @@ fn serializer_tuple_struct() {
     ser.serialize_reflect(obj.as_reflect()).expect("to serialize");
 
     assert_eq!(test_str, load_test_file!("tuple_struct.comp"))
+}
+
+#[test]
+fn serializer_enum() {
+    let obj = TestEnum::C;
+    let mut test_str = String::default();
+
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    drop(r);
+
+    let mut ser = super::ComponentSer {
+        file: &mut test_str,
+        type_repo: repo
+    };
+
+    ser.serialize_reflect(obj.as_reflect()).expect("to serialize");
+
+    assert_eq!(test_str, load_test_file!("enum.comp"))
 }

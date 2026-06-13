@@ -1,1 +1,15 @@
-TestStruct()
+TestStruct(
+int: 10,
+str: "Test Struct",
+float: 420.69,
+bool: true,
+complex: {
+    ...
+},
+enum_b: B,
+marker: TestMarker,
+tuple_struct: TestTupleStruct(
+2,
+4.0,
+-8
+))
