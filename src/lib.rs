@@ -13,6 +13,8 @@ mod rendering;
 #[cfg(feature = "inspector")]
 pub mod egui_inspector;
 
+mod serde;
+
 pub mod prelude {
     pub use crate::inventory::{
         Inventory, Item, ItemDescriptor, Orientation, Shape, Layout,
@@ -53,4 +55,3 @@ impl Plugin for PolyventoryPlugin {
         app.add_plugins(interaction::InteractionPlugin);
     }
 }
-

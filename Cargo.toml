@@ -11,7 +11,8 @@ strum = "0.28"
 indexmap = "*"
 bitflags = "2"
 bevy-inspector-egui = {version = "*", optional = true}
-
+serde = {version = "1"}
+ron = "*"
 
 [dev-dependencies]
 bevy = { version = "0.18", features = ["default", "track_location"] }
