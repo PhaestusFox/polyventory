@@ -1,15 +1,35 @@
-TestStruct(
+TestStruct{
 int: 10,
 str: "Test Struct",
 float: 420.69,
 bool: true,
 complex: {
-    ...
+int: 0,
+str: "",
+float: 0.0,
+bool: false
 },
 enum_b: B,
 marker: TestMarker,
-tuple_struct: TestTupleStruct(
+tuple_struct: (
 2,
 4.0,
 -8
-))
+),
+set: {
+0,
+-1,
+1,
+10,
+15,
+-2
+},
+map: {
+0: 1,
+-1: 2,
+1: 3,
+10: 4,
+15: 5,
+-2: 6
+}
+}

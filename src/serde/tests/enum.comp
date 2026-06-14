@@ -1,1 +1,11 @@
-TestEnum::C
+[TestEnum; 3][
+C,
+Struct{
+a: 2,
+b: 10.0
+},
+Tuple(
+3,
+15.0
+)
+]
