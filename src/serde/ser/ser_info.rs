@@ -9,8 +9,8 @@ pub struct InfoSer<'a, T> {
 }
 
 impl<'a, T> InfoSer<'a, T> {
-    pub fn new(file: &'a mut T, registry: &'a TypeRegistry, named: bool) -> Self {
-        Self { file, registry, named }
+    pub fn new(file: &'a mut T, registry: &'a TypeRegistry) -> Self {
+        Self { file, registry, named: true }
     }
 }
 
@@ -29,12 +29,13 @@ impl<T: core::fmt::Write> InfoSer<'_, T> {
         }
     }
 
-    pub fn name(&mut self, name: impl HasName) -> Result<(), SerdeError> {
+    pub fn name(&mut self, name: impl HasName) -> Result<bool, SerdeError> {
         if self.named {
             self.named = false;
-            write!(self.file, "{}", name.name()).map_err(SerdeError::WrightError)
+            write!(self.file, "{}", name.name())?;
+            Ok(true)
         } else {
-            Ok(())
+            Ok(false)
         }
     }
 }
