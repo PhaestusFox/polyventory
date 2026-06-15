@@ -4,7 +4,9 @@ use crate::serde::error::SerdeError;
 
 impl<T: core::fmt::Write> super::InfoSer<'_, T> {
     pub fn serialise_enum(&mut self, v: &dyn Reflect, info: &EnumInfo) -> Result<(), SerdeError> {
-        self.name(info);
+        if self.name(info)? {
+            write!(self.file, ": ")?;
+        }
         let ReflectRef::Enum(data) = v.reflect_ref() else {
             todo!("Todo reflect passed in to serde enum is not enum");
         };

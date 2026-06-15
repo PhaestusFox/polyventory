@@ -1,4 +1,16 @@
-use bevy::{ecs::entity::Entity, platform::collections::{HashMap, HashSet}, reflect::{PartialReflect, Reflect, TypeRegistryArc}};
+use bevy::{ecs::entity::Entity, math::Vec3, platform::collections::{HashMap, HashSet}, reflect::{PartialReflect, Reflect, TypeRegistryArc}, transform::components::Transform};
+
+fn get_repo() -> TypeRegistryArc {
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<Entity>();
+    r.register::<(u32,)>();
+    r.register::<(f32, u32)>();
+    r.register::<(u32, f32, String)>();
+    drop(r);
+    repo
+}
 
 macro_rules! load_test_file {
     ($path: literal) => {
@@ -51,7 +63,7 @@ impl Default for TestStruct {
     }
 }
 
-#[derive(Default, Reflect, PartialEq)]
+#[derive(Default, Reflect, PartialEq, Debug)]
 enum TestEnum {
     A,
     #[default]
@@ -72,6 +84,12 @@ struct ComplexStruct {
     bool: bool,
 }
 
+#[derive(Reflect)]
+struct NewTypeStruct(f32);
+
+#[derive(Reflect)]
+struct TupleStruct(f32, u32);
+
 macro_rules! serializer_test {
     ($repo: ident, $input: expr, $result: literal) => {
         let mut data = String::default();
@@ -83,7 +101,7 @@ macro_rules! serializer_test {
         ser.serialize_reflect(t.as_reflect()).unwrap();
         assert_eq!(data, $result)
     };
-        ($repo: ident, $input: expr, $result: pat) => {
+    ($repo: ident, $input: expr, $result: pat) => {
         let mut data = String::default();
         let t = $input;
         let mut ser = super::ComponentSer {
@@ -204,7 +222,7 @@ fn serializer_enum() {
     
     let mut ser = super::ComponentSer {
         file: &mut test_str,
-        type_repo: repo
+        type_repo: repo.clone()
     };
     let enums = vec![
         TestEnum::C,
@@ -214,10 +232,12 @@ fn serializer_enum() {
     ser.serialize_reflect(enums.as_reflect()).expect("to work");
     assert!(test_str.starts_with("Vec<TestEnum>["));
     assert_eq!(test_str.replace("Vec<TestEnum>", "[TestEnum; 3]"), load_test_file!("enum.comp"));
+
+    serializer_test!(repo, TestEnum::B, "TestEnum: B");
 }
     
 macro_rules! serde_test {
-    ($input: expr, $repo: ident) => {
+    ($repo: ident, $input: expr) => {
         let mut data = String::default();
         let t = $input;
         let mut ser = super::ComponentSer {
@@ -228,47 +248,106 @@ macro_rules! serde_test {
         let de = super::ComponentDe {
             type_repo: $repo.clone()
         };
-        let v = de.deserialize_str(&data);
-        assert_eq!(t.reflect_partial_eq(v.as_partial_reflect()), Some(true));
+        let v = de.deserialize_str(&data).unwrap();
+        assert_eq!(t.reflect_partial_eq(v.as_partial_reflect()), Some(true), "{:?} != {:?}", v, t.as_partial_reflect());
     };
 }
     
-//     #[test]
-//     fn serde_enum() {
-//         let mut test_str = String::default();
-        
-//         let repo = TypeRegistryArc::default();
-//         let mut r = repo.write();
-//         r.register::<TestStruct>();
-//         r.register::<[TestEnum; 3]>();
-//         r.register::<Vec<TestEnum>>();
-//         drop(r);
-        
-//         serde_test!([
-//             TestEnum::C,
-//             TestEnum::Struct { a: 2, b: 10. },
-//             TestEnum::Tuple(3, 15.),
-//         ], repo);
-//         serde_test!(TestEnum::C, repo);
-//     }
+#[test]
+fn serde_enum() {
+    let mut test_str = String::default();
     
-// #[test]
-// fn serde_opaque() {
-//     let repo = TypeRegistryArc::default();
-//     let mut r = repo.write();
-//     r.register::<TestStruct>();
-//     r.register::<[TestEnum; 3]>();
-//     r.register::<Vec<TestEnum>>();
-//     drop(r);
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<[TestEnum; 3]>();
+    r.register::<Vec<TestEnum>>();
+    drop(r);
     
-//     serde_test!(2i32, repo);
-//     serde_test!(2u32, repo);
-//     serde_test!(2f32, repo);
-//     serde_test!("two", repo);
-//     serde_test!(String::from("two"), repo);
-//     serde_test!('2', repo);
-//     serde_test!((), repo);
-//     serde_test!(true, repo);
-//     serde_test!(false, repo);
-//     serde_test!(Entity::from_bits(3), repo);
-// }
+    serde_test!(repo, TestEnum::C);
+    serde_test!(repo, TestEnum::Struct { a: 2, b: 10. });
+    serde_test!(repo, TestEnum::Tuple(3, 15.));
+    serde_test!(repo, [
+        TestEnum::C,
+        TestEnum::Struct { a: 2, b: 10. },
+        TestEnum::Tuple(3, 15.),
+    ]);
+}
+    
+#[test]
+fn serde_opaque() {
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<[TestEnum; 3]>();
+    r.register::<Vec<TestEnum>>();
+    r.register::<Entity>();
+    drop(r);
+
+    serde_test!(repo, 2i32);
+    serde_test!(repo, 2u32);
+    serde_test!(repo, 2f32);
+    serde_test!(repo, String::from("two"));
+    serde_test!(repo, '2');
+    serde_test!(repo, true);
+    serde_test!(repo, false);
+    serde_test!(repo, Entity::from_bits(3));
+}
+
+#[test]
+fn serde_all() {
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<Entity>();
+    drop(r);
+
+    serde_test!(repo, TestStruct::default());
+}
+
+#[test]
+fn serde_struct() {
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<Vec3>();
+    r.register::<Transform>();
+    r.register::<NewTypeStruct>();
+    r.register::<TupleStruct>();
+    r.register::<Entity>();
+    drop(r);
+
+    serde_test!(repo, TestMarker);
+    serde_test!(repo, Vec3::ZERO);
+    serde_test!(repo, Transform::IDENTITY);
+    serde_test!(repo, ComplexStruct::default());
+    serde_test!(repo, NewTypeStruct(10.));
+    serde_test!(repo, TupleStruct(5., 1));
+}
+
+#[test]
+fn serde_tuple() {
+    let repo = TypeRegistryArc::default();
+    let mut r = repo.write();
+    r.register::<TestStruct>();
+    r.register::<Entity>();
+    r.register::<(u32,)>();
+    r.register::<(f32, u32)>();
+    r.register::<(u32, f32, String)>();
+    drop(r);
+
+    serde_test!(repo, ());
+    serde_test!(repo, (1u32,));
+    serde_test!(repo, (1.0f32,2u32));
+    serde_test!(repo, (1u32, 2.0f32, String::from("Test")));
+}
+
+#[test]
+fn bevy_test() {
+    let repo = get_repo();
+    let repo = repo.read();
+    let test = TestStruct::default();
+    let serde = bevy::reflect::serde::ReflectSerializer::new(test.as_partial_reflect(), &repo);
+    let r = ron::ser::to_string_pretty(&serde, ron::ser::PrettyConfig::new()).unwrap();
+    panic!("{}", r);
+}

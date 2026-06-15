@@ -28,7 +28,7 @@ impl<T: core::fmt::Write> super::InfoSer<'_, T> {
     }
 
     pub fn serialize_set(&mut self, v: &dyn Reflect, info: &SetInfo) -> Result<(), SerdeError> {
-        self.name(info);
+        self.name(info)?;
         let ReflectRef::Set(l) = v.reflect_ref() else {
             panic!("Non set passed to serialize set");
         };
