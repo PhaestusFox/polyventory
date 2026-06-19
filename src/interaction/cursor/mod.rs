@@ -1,6 +1,9 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
-use crate::{interaction::{InventoryHandle, interactions::MoveItem}, prelude::*};
 use crate::inventory::Operations;
+use crate::{
+    interaction::{InventoryHandle, interactions::MoveItem},
+    prelude::*,
+};
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 #[cfg(feature = "mouse_interaction")]
 mod mouse;
@@ -64,7 +67,10 @@ impl InventoryCursor<'_, '_> {
     }
 
     pub fn update(&mut self, item: Entity, orientation: Orientation) {
-        let mut inv = self.manager.open_inventory(&self.inventory.inventory).expect("Cursor Inventory Always Exists");
+        let mut inv = self
+            .manager
+            .open_inventory(&self.inventory.inventory)
+            .expect("Cursor Inventory Always Exists");
         let Some(shape) = inv.get_shape_mut(item) else {
             trace!("Attempted to update item no in hand");
             return;
@@ -79,8 +85,10 @@ impl InventoryCursor<'_, '_> {
     }
 
     pub fn is_empty(&self) -> bool {
-        
-        let inv = self.manager.read_inventory(self.inventory.as_ref()).expect("Cursor Inventory Always exists");
+        let inv = self
+            .manager
+            .read_inventory(self.inventory.as_ref())
+            .expect("Cursor Inventory Always exists");
         inv.is_empty()
     }
 
@@ -89,12 +97,17 @@ impl InventoryCursor<'_, '_> {
     }
 
     pub fn last(&self) -> Option<(Entity, Shape)> {
-        let inv = self.manager.read_inventory(self.inventory.as_ref()).expect("Cursor Inventory Always exists");
+        let inv = self
+            .manager
+            .read_inventory(self.inventory.as_ref())
+            .expect("Cursor Inventory Always exists");
         inv.items().last().map(|(e, s)| (*e, s.shape.clone()))
     }
 
     pub fn set_style(&mut self, style: Handle<InventoryStyle>) {
-        self.commands.entity(self.entity()).insert(InventoryStyleHandle(style));
+        self.commands
+            .entity(self.entity())
+            .insert(InventoryStyleHandle(style));
     }
 }
 
@@ -116,7 +129,11 @@ impl FromWorld for CursorInventory {
         let mut inventorys = world.resource_mut::<Assets<Inventory>>();
         let inventory = Inventory::new("CursorInventory");
         let inventory = inventorys.add(inventory);
-        CursorInventory { inventory, origin: None, picked: false }
+        CursorInventory {
+            inventory,
+            origin: None,
+            picked: false,
+        }
     }
 }
 
@@ -139,20 +156,26 @@ pub fn try_pickup(
     mut cursor: InventoryCursor,
 ) {
     if !cursor.is_empty() {
-        warn!("Attempted to pick up item {:?} while already holding an item", to.item);
+        warn!(
+            "Attempted to pick up item {:?} while already holding an item",
+            to.item
+        );
         return;
     }
     let Ok(item) = items.get(to.item) else {
-        warn!("PickupItem event references an entity({:?}) that is not an item", to.item);
+        warn!(
+            "PickupItem event references an entity({:?}) that is not an item",
+            to.item
+        );
         return;
     };
     // TODO add locked marker component so items can be locked in an inventory and not be picked up
 
-
     let origin: Option<InventoryHandle>;
     if let Some(find) = cursor.manager.find_item(to.item)
-    && let Some(inventory) = cursor.manager.read_inventory(find)
-    && let Some(entry) = inventory.get_shape(to.item) {
+        && let Some(inventory) = cursor.manager.read_inventory(find)
+        && let Some(entry) = inventory.get_shape(to.item)
+    {
         origin = Some(InventoryHandle {
             inventory: find,
             entry: entry.clone(),
@@ -174,14 +197,16 @@ pub struct DropItem {
     pub cell_type: CellType,
 }
 
-pub fn try_drop(
-    to: On<DropItem>,
-    mut commands: Commands,
-    cursor: InventoryCursor,
-) {
-    trace!("Attempting to drop item {:?} into inventory {:?} with shape {:?}", to.item, to.inventory, to.shape);
+pub fn try_drop(to: On<DropItem>, mut commands: Commands, cursor: InventoryCursor) {
+    trace!(
+        "Attempting to drop item {:?} into inventory {:?} with shape {:?}",
+        to.item, to.inventory, to.shape
+    );
     let Some(inv) = cursor.manager.read_inventory(to.inventory) else {
-        warn!("Failed to open inventory {:?} for cursor drop", to.inventory);
+        warn!(
+            "Failed to open inventory {:?} for cursor drop",
+            to.inventory
+        );
         return;
     };
     if inv.can_fit(&to.cell_type, &to.shape) {
@@ -189,10 +214,13 @@ pub fn try_drop(
             item: to.item,
             inventory: to.inventory,
             shape: to.shape.clone(),
-            cell_type: to.cell_type.clone()
+            cell_type: to.cell_type.clone(),
         });
     } else {
-        warn!("Item with shape {:?} does not fit in inventory {:?} slot type {:?}", to.shape, to.inventory, to.cell_type);
+        warn!(
+            "Item with shape {:?} does not fit in inventory {:?} slot type {:?}",
+            to.shape, to.inventory, to.cell_type
+        );
         return;
     }
 }
@@ -204,10 +232,7 @@ pub enum OrientateItem {
     CounterClockWise,
 }
 
-pub fn try_orientate(
-    event: On<OrientateItem>,
-    mut cursor: InventoryCursor,
-) {
+pub fn try_orientate(event: On<OrientateItem>, mut cursor: InventoryCursor) {
     if cursor.is_empty() {
         trace!("Cursor is empty");
         return;
@@ -218,7 +243,9 @@ pub fn try_orientate(
     };
     let new = match event.event() {
         OrientateItem::ClockWise => shape.orientation.operation(Operations::RotateClockWise),
-        OrientateItem::CounterClockWise => shape.orientation.operation(Operations::RotateCounterClockWise),
+        OrientateItem::CounterClockWise => shape
+            .orientation
+            .operation(Operations::RotateCounterClockWise),
     };
     cursor.update(item, new);
 }
@@ -239,12 +266,15 @@ fn calc_offset(shape: &Shape, orientation: Orientation) -> IVec2 {
             // v = -bounds.min.y - p.x
             // v + bounds.min.y = -p.x
             // p.x = -(v + bounds.min.y)
-            ivec2(-(shape.offset.y + bounds.min.y), shape.offset.x + bounds.max.x)
-        },
+            ivec2(
+                -(shape.offset.y + bounds.min.y),
+                shape.offset.x + bounds.max.x,
+            )
+        }
         0b10 => {
             let bounds = shape.layout.bounds();
-            shape.offset + bounds.max 
-        },
+            shape.offset + bounds.max
+        }
         0b11 => {
             let bounds = shape.layout.bounds() * shape.orientation;
             // shape.offset = ivec2(-bounds.min.x - p.y, -bounds.max.y + p.x)
@@ -254,31 +284,34 @@ fn calc_offset(shape: &Shape, orientation: Orientation) -> IVec2 {
             // v = shape.offset.y
             // v = -bounds.max.y + p.x
             // p.x = v + bounds.max.y
-            ivec2(shape.offset.y + bounds.max.y, -(shape.offset.x + bounds.min.x))
-        },
+            ivec2(
+                shape.offset.y + bounds.max.y,
+                -(shape.offset.x + bounds.min.x),
+            )
+        }
         _ => {
             let bounds = shape.layout.bounds();
             -(shape.offset - bounds.min)
-        },
+        }
     };
 
     match orientation.intersection(Orientation::DEG270).bits() {
         0b01 => {
             let bounds = shape.layout.bounds() * orientation;
             ivec2(-bounds.max.x + p.y, -bounds.min.y - p.x)
-        },
+        }
         0b10 => {
             let bounds = shape.layout.bounds();
             p - bounds.max
-        },
+        }
         0b11 => {
             let bounds = shape.layout.bounds() * orientation;
             ivec2(-bounds.min.x - p.y, -bounds.max.y + p.x)
-        },
+        }
         _ => {
             let bounds = shape.layout.bounds();
             bounds.min - p
-        },
+        }
     }
 }
 
@@ -287,14 +320,21 @@ fn test_calc_offset() {
     let mut shape = Shape {
         offset: IVec2::ZERO,
         orientation: Orientation::empty(),
-        layout: Layout::Rect { size: UVec2::new(2, 3) }
+        layout: Layout::Rect {
+            size: UVec2::new(2, 3),
+        },
     };
     for x in -10..=10 {
         for y in -10..=10 {
             shape.offset = ivec2(x, y);
             for orientation in Orientation::iter_orientations() {
                 shape.orientation = orientation;
-                assert_eq!(calc_offset(&shape, orientation), ivec2(x, y), "{}", orientation);
+                assert_eq!(
+                    calc_offset(&shape, orientation),
+                    ivec2(x, y),
+                    "{}",
+                    orientation
+                );
             }
         }
     }

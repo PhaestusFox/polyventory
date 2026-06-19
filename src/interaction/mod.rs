@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::{inventory::entry::Entry, prelude::*};
+use bevy::prelude::*;
 
 mod interactions;
 

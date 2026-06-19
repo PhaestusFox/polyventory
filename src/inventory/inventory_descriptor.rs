@@ -46,31 +46,46 @@ impl FromStr for InventoryDescriptor {
                     } else {
                         slot = Some((t, Shape::default()));
                     }
-                },
+                }
                 "x" => {
-                    let x = val.trim().parse().map_err(|e| InventoryDescriptorParseError::FieldParseError("x", e))?;
+                    let x = val
+                        .trim()
+                        .parse()
+                        .map_err(|e| InventoryDescriptorParseError::FieldParseError("x", e))?;
                     if let Some((_, shape)) = slot.as_mut() {
                         shape.offset.x = x;
                     } else {
-                        slot = Some((CellType::Untyped, Shape {
-                            offset: IVec2::new(x, 0),
-                            ..default()
-                        }));
+                        slot = Some((
+                            CellType::Untyped,
+                            Shape {
+                                offset: IVec2::new(x, 0),
+                                ..default()
+                            },
+                        ));
                     }
                 }
                 "y" => {
-                    let y = val.trim().parse().map_err(|e| InventoryDescriptorParseError::FieldParseError("y", e))?;
+                    let y = val
+                        .trim()
+                        .parse()
+                        .map_err(|e| InventoryDescriptorParseError::FieldParseError("y", e))?;
                     if let Some((_, shape)) = slot.as_mut() {
                         shape.offset.y = y;
                     } else {
-                        slot = Some((CellType::Untyped, Shape {
-                            offset: IVec2::new(0, y),
-                            ..default()
-                        }));
+                        slot = Some((
+                            CellType::Untyped,
+                            Shape {
+                                offset: IVec2::new(0, y),
+                                ..default()
+                            },
+                        ));
                     }
-                },
+                }
                 "w" => {
-                    let w = val.trim().parse().map_err(|e| InventoryDescriptorParseError::FieldParseError("w", e))?;
+                    let w = val
+                        .trim()
+                        .parse()
+                        .map_err(|e| InventoryDescriptorParseError::FieldParseError("w", e))?;
                     if let Some((_, shape)) = slot.as_mut() {
                         match shape.layout {
                             Layout::Rect { ref mut size } => {
@@ -78,14 +93,22 @@ impl FromStr for InventoryDescriptor {
                             }
                         }
                     } else {
-                        slot = Some((CellType::Untyped, Shape {
-                            layout: Layout::Rect { size: UVec2::new(w, 0) },
-                            ..default()
-                        }));
+                        slot = Some((
+                            CellType::Untyped,
+                            Shape {
+                                layout: Layout::Rect {
+                                    size: UVec2::new(w, 0),
+                                },
+                                ..default()
+                            },
+                        ));
                     }
                 }
                 "h" => {
-                    let h = val.trim().parse().map_err(|e| InventoryDescriptorParseError::FieldParseError("h", e))?;
+                    let h = val
+                        .trim()
+                        .parse()
+                        .map_err(|e| InventoryDescriptorParseError::FieldParseError("h", e))?;
                     if let Some((_, shape)) = slot.as_mut() {
                         match shape.layout {
                             Layout::Rect { ref mut size } => {
@@ -93,10 +116,15 @@ impl FromStr for InventoryDescriptor {
                             }
                         }
                     } else {
-                        slot = Some((CellType::Untyped, Shape {
-                            layout: Layout::Rect { size: UVec2::new(0, h) },
-                            ..default()
-                        }));
+                        slot = Some((
+                            CellType::Untyped,
+                            Shape {
+                                layout: Layout::Rect {
+                                    size: UVec2::new(0, h),
+                                },
+                                ..default()
+                            },
+                        ));
                     }
                 }
                 _ => {}
@@ -116,13 +144,15 @@ impl AssetLoader for InventoryDescriptorLoader {
     type Asset = InventoryDescriptor;
     type Settings = ();
     type Error = InventoryDescriptorLoadError;
-    
+
     fn load(
         &self,
         reader: &mut dyn bevy::asset::io::Reader,
         _settings: &Self::Settings,
         _load_context: &mut bevy::asset::LoadContext,
-    ) -> impl bevy::tasks::ConditionalSendFuture<Output = std::prelude::v1::Result<Self::Asset, Self::Error>> {
+    ) -> impl bevy::tasks::ConditionalSendFuture<
+        Output = std::prelude::v1::Result<Self::Asset, Self::Error>,
+    > {
         async {
             let mut data = String::new();
             reader.read_to_string(&mut data).await?;

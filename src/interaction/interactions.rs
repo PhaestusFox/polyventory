@@ -1,5 +1,5 @@
-use bevy::{ecs::event, prelude::*};
 use crate::{inventory::entry::Entry, prelude::*};
+use bevy::{ecs::event, prelude::*};
 
 #[derive(Debug, Event)]
 pub enum MoveItem {
@@ -18,7 +18,7 @@ pub enum MoveItem {
         inventory: AssetId<Inventory>,
         cell_type: CellType,
         shape: Shape,
-    }
+    },
 }
 
 impl MoveItem {
@@ -34,42 +34,51 @@ impl MoveItem {
         match self {
             MoveItem::PlaceItem { inventory, .. } => *inventory,
             MoveItem::FitItem { inventory, .. } => *inventory,
-            MoveItem::InsertItem { inventory, .. } => *inventory
+            MoveItem::InsertItem { inventory, .. } => *inventory,
         }
     }
 }
 
-pub fn move_item(
-    event: On<MoveItem>,
-    mut manager: InventoryManager,
-) {
+pub fn move_item(event: On<MoveItem>, mut manager: InventoryManager) {
     let Some(origin) = manager.find_item(event.item()) else {
         trace!("Failed to find item {:?} in any inventory", event.item());
         return;
     };
     let Some(mut dest) = manager.open_inventory(event.destination()) else {
-        trace!("Failed to open destination inventory for item {:?} move", event.item());
+        trace!(
+            "Failed to open destination inventory for item {:?} move",
+            event.item()
+        );
         return;
     };
     let target = match event.event() {
-        MoveItem::FitItem {..} => {
-            dest.find_fit(event.item()).ok()
-        },
-        MoveItem::PlaceItem { cell_type, shape, .. } => {
+        MoveItem::FitItem { .. } => dest.find_fit(event.item()).ok(),
+        MoveItem::PlaceItem {
+            cell_type, shape, ..
+        } => {
             if dest.can_fit(cell_type, shape) {
                 Some((cell_type.clone(), shape.clone()))
             } else {
                 None
             }
-        },
-        MoveItem::InsertItem { item, cell_type, shape, .. } => {
+        }
+        MoveItem::InsertItem {
+            item,
+            cell_type,
+            shape,
+            ..
+        } => {
             dest.insert_item(*item, shape.clone(), cell_type.clone());
             return;
         }
     };
     error!("Moving Item");
     let Some((cell, shape)) = target else {
-        trace!("Failed to fit item {:?} inventory {:?}", event.item(), event.destination());
+        trace!(
+            "Failed to fit item {:?} inventory {:?}",
+            event.item(),
+            event.destination()
+        );
         return;
     };
     if let Err(e) = dest.add_item(event.item(), shape) {

@@ -43,7 +43,11 @@ pub(crate) fn register_default_style(app: &mut App, default_style: Option<&Inven
     let asset_server = app.world_mut().resource::<AssetServer>().clone();
     let style = InventoryStyle {
         cell_size: style.cell_size,
-        cell_icon: style.cell_icon.as_ref().map(|path| asset_server.load(path)).unwrap_or(InventoryStyler::FALLBACK_STYLE.cell_icon),
+        cell_icon: style
+            .cell_icon
+            .as_ref()
+            .map(|path| asset_server.load(path))
+            .unwrap_or(InventoryStyler::FALLBACK_STYLE.cell_icon),
         background: style
             .background
             .as_ref()
@@ -52,7 +56,6 @@ pub(crate) fn register_default_style(app: &mut App, default_style: Option<&Inven
     let mut assets = app.world_mut().resource_mut::<Assets<InventoryStyle>>();
     assets.insert(AssetId::default(), style).unwrap();
 }
-
 
 #[derive(SystemParam)]
 pub struct InventoryStyler<'w, 's> {
@@ -74,9 +77,9 @@ impl InventoryStyler<'_, '_> {
 
     pub fn get_style(&self, style: impl Into<AssetId<InventoryStyle>>) -> &InventoryStyle {
         self.styles.get(style).unwrap_or_else(|| {
-                warn!("Style handle not found, falling back to default");
-                self.get_default()
-            })
+            warn!("Style handle not found, falling back to default");
+            self.get_default()
+        })
     }
 
     pub fn style_handle(&self, entity: Entity) -> Handle<InventoryStyle> {
@@ -90,11 +93,13 @@ impl InventoryStyler<'_, '_> {
         }
         match style {
             Err(_) => Handle::default(),
-            Ok(handle) => handle.0.clone()
+            Ok(handle) => handle.0.clone(),
         }
     }
 
     pub fn get_default(&self) -> &InventoryStyle {
-        self.styles.get(AssetId::default()).unwrap_or(&Self::FALLBACK_STYLE)
+        self.styles
+            .get(AssetId::default())
+            .unwrap_or(&Self::FALLBACK_STYLE)
     }
 }

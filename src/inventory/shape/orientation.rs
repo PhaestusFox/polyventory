@@ -13,20 +13,15 @@ bitflags::bitflags! {
 impl core::fmt::Display for Orientation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = f.debug_struct("Orientation");
-        s.field("Rotation", match self.bits() & 0b11 {
-            0b01 => {
-                &"90"
+        s.field(
+            "Rotation",
+            match self.bits() & 0b11 {
+                0b01 => &"90",
+                0b10 => &"180",
+                0b11 => &"270",
+                _ => &"0",
             },
-            0b10 => {
-                &"180"
-            },
-            0b11 => {
-                &"270"
-            },
-            _ => {
-                &"0"
-            }
-        });
+        );
         s.finish()
     }
 }
@@ -51,7 +46,7 @@ impl Orientation {
             Operations::RotateCounterClockWise => self.ccw(),
         }
     }
-    
+
     fn cw(mut self) -> Self {
         let s = self.bits().wrapping_add(1) & 0b11;
         self.remove(Orientation::DEG270);
@@ -87,6 +82,5 @@ impl Iterator for OrientationIter {
         let o = Orientation::from_bits_truncate(self.0);
         self.0 += 1;
         Some(o)
-
     }
 }

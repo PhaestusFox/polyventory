@@ -27,9 +27,7 @@ fn main() {
         debug_info: true,
         ..Default::default()
     });
-    app.add_plugins((
-        polyventory::prelude::ToolTipPlugin,
-    ));
+    app.add_plugins((polyventory::prelude::ToolTipPlugin,));
     app.init_resource::<LootTable>();
     app.add_systems(Startup, spawn_camera);
     app.add_systems(OnExit(Loaded::False), spawn_inventory);
@@ -92,21 +90,23 @@ fn spawn_inventory(
     mut inventory_manager: InventoryManager,
     loot: Res<LootTable>,
 ) {
-    let (test_inventory_handle, mut test_inventory) = inventory_manager.create_inventory("Test Inventory");
-    test_inventory.add_slot(CellType::Untyped, Shape {
-        offset: IVec2::ZERO,
-        orientation: Orientation::DEG0,
-        layout: Layout::Rect { size: UVec2::new(5, 7) },
-    });
+    let (test_inventory_handle, mut test_inventory) =
+        inventory_manager.create_inventory("Test Inventory");
+    test_inventory.add_slot(
+        CellType::Untyped,
+        Shape {
+            offset: IVec2::ZERO,
+            orientation: Orientation::DEG0,
+            layout: Layout::Rect {
+                size: UVec2::new(5, 7),
+            },
+        },
+    );
     let empty_bottle = loot.items[0].clone();
     let r = test_inventory.spawn_item(empty_bottle);
     info!("Spawning empty bottle: {:?}", r);
     let water_bottle = loot.items[1].clone();
-    let r = test_inventory.spawn_item_at(
-        water_bottle.clone(),
-        IVec2::new(1, 8),
-        Orientation::DEG0,
-    );
+    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::DEG0);
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
@@ -116,7 +116,11 @@ fn spawn_inventory(
 
     let mut rng = rand::rng();
     for _ in 0..15 {
-        let item = loot.items.choose(&mut rng).expect("At least one item").clone();
+        let item = loot
+            .items
+            .choose(&mut rng)
+            .expect("At least one item")
+            .clone();
         match test_inventory.spawn_item(item) {
             Ok(item) => info!("Spawned random item: {:?}", item),
             Err(f) => error!("Failed to spawn random item: {:?}", f),

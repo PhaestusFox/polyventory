@@ -32,7 +32,10 @@ impl InventoryManager<'_, '_> {
         })
     }
 
-    pub fn create_inventory(&mut self, name: impl Into<String>) -> (Handle<Inventory>, InventoryCommands<'_, '_, '_>) {
+    pub fn create_inventory(
+        &mut self,
+        name: impl Into<String>,
+    ) -> (Handle<Inventory>, InventoryCommands<'_, '_, '_>) {
         let inv = Inventory::new(name);
         let h = self.inventory_assets.add(inv);
         let id = h.id();
@@ -79,7 +82,6 @@ impl Drop for InventoryCommands<'_, '_, '_> {
 }
 
 impl InventoryCommands<'_, '_, '_> {
-    
     /// Add an existing item from the world to this inventory.
     /// will try find the first place it fits
     pub fn fit_item(&mut self, item: Entity) -> Result<(), AddFailed> {
@@ -101,14 +103,12 @@ impl InventoryCommands<'_, '_, '_> {
         let Some(descriptor) = self.descriptors.get(item_e) else {
             return Err(ItemError::DescriptorNotFound(item_e.id()).into());
         };
-        self.current_inventory.fit_item(descriptor).map_err(Failed::F)
+        self.current_inventory
+            .fit_item(descriptor)
+            .map_err(Failed::F)
     }
 
-    pub fn add_item(
-        &mut self,
-        item: Entity,
-        shape: Shape,
-    ) -> Result<(), AddFailed> {
+    pub fn add_item(&mut self, item: Entity, shape: Shape) -> Result<(), AddFailed> {
         let Ok((handle, _)) = self.items.get(item) else {
             return Err(ItemError::NotAnItem(item).into());
         };
@@ -121,7 +121,7 @@ impl InventoryCommands<'_, '_, '_> {
             }
             if self.can_fit(slot_type, &shape) {
                 self.insert_item(item, shape, slot_type.clone());
-                return Ok(())
+                return Ok(());
             }
         }
         Err(FitFailed::NoValidSlots.into())
@@ -135,7 +135,12 @@ impl InventoryCommands<'_, '_, '_> {
         self.spawn_item_at_internal(descriptor, item, cell_type, shape)
     }
 
-    pub fn spawn_item_at(&mut self, item: Handle<ItemDescriptor>, offset: IVec2, orientation: Orientation) -> Result<Entity, AddFailed> {
+    pub fn spawn_item_at(
+        &mut self,
+        item: Handle<ItemDescriptor>,
+        offset: IVec2,
+        orientation: Orientation,
+    ) -> Result<Entity, AddFailed> {
         let Some(descriptor) = self.descriptors.get(&item) else {
             return Err(ItemError::DescriptorNotFound(item.id()).into());
         };
@@ -154,15 +159,28 @@ impl InventoryCommands<'_, '_, '_> {
         Err(AddFailed::DoesNotFit(self.inv_id))
     }
 
-    fn spawn_item_at_internal(&mut self, descriptor: &ItemDescriptor, item: Handle<ItemDescriptor>, cell_type: CellType, shape: Shape) -> Result<Entity, AddFailed> {
+    fn spawn_item_at_internal(
+        &mut self,
+        descriptor: &ItemDescriptor,
+        item: Handle<ItemDescriptor>,
+        cell_type: CellType,
+        shape: Shape,
+    ) -> Result<Entity, AddFailed> {
         // todo - clean up if failed to add to inventory
         let entity = self
             .commands
-            .spawn((Item::new(item), descriptor.spawn(), InInventory(self.inv_id, cell_type))).id();
+            .spawn((
+                Item::new(item),
+                descriptor.spawn(),
+                InInventory(self.inv_id, cell_type),
+            ))
+            .id();
         let sub: Option<AssetId<Inventory>>;
         if let Some(sub_inventory) = descriptor.sub_inventory() {
             let Some(inv_des) = self.inventory_descriptors.get(sub_inventory) else {
-                return Err(AddFailed::InventoryDescriptorNotFound(sub_inventory.clone()));
+                return Err(AddFailed::InventoryDescriptorNotFound(
+                    sub_inventory.clone(),
+                ));
             };
             let mut inv = inv_des.create_inventory();
             inv.name = format!("{}({:?}) Inventory", descriptor.name(), entity);
@@ -173,10 +191,13 @@ impl InventoryCommands<'_, '_, '_> {
             sub = None;
         };
 
-        self.current_inventory.insert_item(entity, entry::Entry {
-            shape,
-            sub_inventory: sub,
-        });
+        self.current_inventory.insert_item(
+            entity,
+            entry::Entry {
+                shape,
+                sub_inventory: sub,
+            },
+        );
         self.modified = true;
         Ok(entity)
     }
@@ -185,26 +206,42 @@ impl InventoryCommands<'_, '_, '_> {
     /// Returns the inventory the item was removed from
     pub fn remove_item(&mut self, item: Entity) -> Result<AssetId<Inventory>, RemoveFailed> {
         let mut checked = HashSet::new();
-        match self.current_inventory.find(item, &self.all_inventories, &mut checked) {
+        match self
+            .current_inventory
+            .find(item, &self.all_inventories, &mut checked)
+        {
             Some(FoundItem::InSelf) => {
-                self.current_inventory.remove(item).ok_or(RemoveFailed::FailedToRemove)?;
+                self.current_inventory
+                    .remove(item)
+                    .ok_or(RemoveFailed::FailedToRemove)?;
                 Ok(self.inv_id)
-            },
+            }
             Some(FoundItem::InSubInventory(inv)) => {
                 let Some(inventory) = self.all_inventories.get_mut(inv) else {
-                    error!("Failed to get inventory {:?} while trying to remove item {:?}. This should not happen since we just found the item in this inventory. Skipping.", inv, item);
+                    error!(
+                        "Failed to get inventory {:?} while trying to remove item {:?}. This should not happen since we just found the item in this inventory. Skipping.",
+                        inv, item
+                    );
                     return Err(RemoveFailed::InventoryNotFound(inv));
                 };
                 inventory.remove(item).ok_or(RemoveFailed::FailedToRemove)?;
                 Ok(inv)
-            },
+            }
             None => Err(RemoveFailed::ItemNotFound(item)),
         }
     }
 
-    fn find(check: AssetId<Inventory>, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<AssetId<Inventory>> {
+    fn find(
+        check: AssetId<Inventory>,
+        item: Entity,
+        assets: &Assets<Inventory>,
+        checked: &mut HashSet<AssetId<Inventory>>,
+    ) -> Option<AssetId<Inventory>> {
         let Some(inventory) = assets.get(check) else {
-            warn!("Failed to get inventory {:?} while trying to find item {:?}. Skipping.", check, item);
+            warn!(
+                "Failed to get inventory {:?} while trying to find item {:?}. Skipping.",
+                check, item
+            );
             return None;
         };
         if inventory.contains(item) {
@@ -213,7 +250,10 @@ impl InventoryCommands<'_, '_, '_> {
         checked.insert(check);
         for entry in inventory.iter_sub_inventories() {
             if checked.contains(&entry) {
-                error!("Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.", entry, item);
+                error!(
+                    "Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.",
+                    entry, item
+                );
                 continue;
             }
             if let Some(found) = Self::find(entry, item, assets, checked) {
@@ -225,12 +265,21 @@ impl InventoryCommands<'_, '_, '_> {
 
     /// Add item to inventory without checks if it will fit
     pub fn insert_item(&mut self, item: Entity, shape: Shape, cell: CellType) {
-        let sub = self.items.get(item).ok().and_then(|(_, t)| t.map(|g| g.into()));
-        self.current_inventory.insert_item(item, Entry {
-            shape,
-            sub_inventory: sub
-        });
-        self.commands.entity(item).insert(InInventory(self.inv_id, cell));
+        let sub = self
+            .items
+            .get(item)
+            .ok()
+            .and_then(|(_, t)| t.map(|g| g.into()));
+        self.current_inventory.insert_item(
+            item,
+            Entry {
+                shape,
+                sub_inventory: sub,
+            },
+        );
+        self.commands
+            .entity(item)
+            .insert(InInventory(self.inv_id, cell));
         self.modified = true
     }
 
@@ -272,10 +321,19 @@ pub enum AddFailed {
     SlotNotInInventory { slot_index: usize, num_slots: usize },
     #[error("No slots in inventory")]
     NoSlotsInInventory,
-    #[error("Item bounds {item_bounds:?} do not fit within slot {slot_index} bounds {slot_bounds:?}")]
-    NotInBounds { slot_index: usize, item_bounds: Aabb2d, slot_bounds: Aabb2d },
+    #[error(
+        "Item bounds {item_bounds:?} do not fit within slot {slot_index} bounds {slot_bounds:?}"
+    )]
+    NotInBounds {
+        slot_index: usize,
+        item_bounds: Aabb2d,
+        slot_bounds: Aabb2d,
+    },
     #[error("Item Overlaps with existing item in slot {slot_index} at entry {overlap_index}")]
-    OverlapWithExistingItem { slot_index: usize, overlap_index: usize},
+    OverlapWithExistingItem {
+        slot_index: usize,
+        overlap_index: usize,
+    },
     #[error("No slots in inventory accept this item")]
     NoSlotsAcceptThisItem,
     #[error("There is not space big enough to put this it in the inventory")]
@@ -305,7 +363,7 @@ pub enum Failed<F> {
     #[error("{0}")]
     Item(#[from] ItemError),
     #[error("{0}")]
-    F(F)
+    F(F),
 }
 
 #[derive(Debug, thiserror::Error)]

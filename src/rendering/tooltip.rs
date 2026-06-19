@@ -53,7 +53,7 @@ fn spawn_tooltip(mut commands: Commands) {
         Pickable {
             should_block_lower: true,
             is_hoverable: false,
-        }
+        },
     ));
 }
 
@@ -224,13 +224,21 @@ fn show_item_tooltip(
         return;
     };
 
-    if let Some(old) = tooltip.current.replace(event.item) && let Ok((.., rendering_item)) = items.get(old) {
+    if let Some(old) = tooltip.current.replace(event.item)
+        && let Ok((.., rendering_item)) = items.get(old)
+    {
         for item in rendering_item.iter() {
-            tooltip.commands.entity(item).insert(BackgroundColor(Color::WHITE.with_alpha(0.)));
+            tooltip
+                .commands
+                .entity(item)
+                .insert(BackgroundColor(Color::WHITE.with_alpha(0.)));
         }
     }
     for item in rendering_item.iter() {
-        tooltip.commands.entity(item).insert(BackgroundColor(Color::BLACK.lighter(0.5)));
+        tooltip
+            .commands
+            .entity(item)
+            .insert(BackgroundColor(Color::BLACK.lighter(0.5)));
     }
 
     tooltip.clear();
@@ -308,18 +316,14 @@ fn show_item_tooltip(
                 .with_children(|size| {
                     for (slot_type, shape) in descriptor.valid_images() {}
                 });
-                dbg.spawn(
-                    Text::new(format!("Slot Type: {:?}", in_inventory.1)),
-                );
+                dbg.spawn(Text::new(format!("Slot Type: {:?}", in_inventory.1)));
                 let Some(inv_info) = inventorys.get(in_inventory.0) else {
                     return;
                 };
                 let Some(shape) = inv_info.get_shape(event.item) else {
                     return;
                 };
-                dbg.spawn(
-                    Text::new(format!("{}", shape)),
-                );
+                dbg.spawn(Text::new(format!("{}", shape)));
             });
         if let Some(inv) = descriptor.sub_inventory() {
             let id = match inv.path() {
@@ -329,12 +333,11 @@ fn show_item_tooltip(
                 None => match inv.id() {
                     AssetId::Index { index, .. } => format!("SubInv-Index: {:?}", index),
                     AssetId::Uuid { uuid } => format!("SubInv-Uuid: {}", uuid),
-                }
+                },
             };
-            tooltip.commands.spawn((
-                Text::new(id),
-                ChildOf(tooltip.root()),)
-            );
+            tooltip
+                .commands
+                .spawn((Text::new(id), ChildOf(tooltip.root())));
         }
     }
 }

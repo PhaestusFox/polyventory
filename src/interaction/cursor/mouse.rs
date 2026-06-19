@@ -1,5 +1,5 @@
-use bevy::{input::mouse::AccumulatedMouseScroll, prelude::*, window::PrimaryWindow};
 use super::*;
+use bevy::{input::mouse::AccumulatedMouseScroll, prelude::*, window::PrimaryWindow};
 
 pub struct MouseInventoryPlugin;
 
@@ -45,7 +45,10 @@ fn detect_pickup(
     };
 
     let Some(inventory) = manager.read_inventory(inventory_id) else {
-        warn!("Failed to open inventory {:?} for cursor drop", inventory_id);
+        warn!(
+            "Failed to open inventory {:?} for cursor drop",
+            inventory_id
+        );
         return;
     };
     let Some(size) = inventory.get_shape(rendered_item.item) else {
@@ -58,24 +61,27 @@ fn detect_pickup(
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             ivec2(-bounds.max.x + p.y, -bounds.min.y - p.x)
-        },
+        }
         0b10 => {
             let bounds = size.layout.bounds();
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             p - bounds.max
-        },
+        }
         0b11 => {
             let bounds = size.layout.bounds() * size.orientation;
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             ivec2(-bounds.min.x - p.y, -bounds.max.y + p.x)
-        },
+        }
         _ => {
             let bounds = size.layout.bounds();
             let p = (size.layout.size().as_vec2() * pos).as_ivec2();
             bounds.min - p
-        },
+        }
     };
-    trace!("Clicked on item entity {:?} with item {:?}: {} = {:?}", click.entity, rendered_item.item, pos, clicked);
+    trace!(
+        "Clicked on item entity {:?} with item {:?}: {} = {:?}",
+        click.entity, rendered_item.item, pos, clicked
+    );
     commands.trigger(PickupItem {
         item: rendered_item.item,
         offset: clicked,
@@ -96,20 +102,32 @@ fn detect_drop(
         return;
     };
     let Some(pos) = click.hit.position else {
-        warn!("Click on inventory entity {:?} did not have a hit position", click.entity);
+        warn!(
+            "Click on inventory entity {:?} did not have a hit position",
+            click.entity
+        );
         return;
     };
     let pos = pos.truncate() + Vec2::splat(0.5);
     let Ok(inventory_id) = icons.get(slot.inventory) else {
-        warn!("Clicked inventory entity {:?} does not have a valid slot index", click.entity);
+        warn!(
+            "Clicked inventory entity {:?} does not have a valid slot index",
+            click.entity
+        );
         return;
     };
     let Some(inventory) = cursor.manager.read_inventory(inventory_id) else {
-        warn!("Failed to open inventory {:?} for cursor drop", inventory_id);
+        warn!(
+            "Failed to open inventory {:?} for cursor drop",
+            inventory_id
+        );
         return;
     };
     let Some(size) = inventory.get_slot(&slot.slot) else {
-        error!("Clicked slot with type {} but inventory {:?} does not have a this type", slot.slot, inventory_id);
+        error!(
+            "Clicked slot with type {} but inventory {:?} does not have a this type",
+            slot.slot, inventory_id
+        );
         return;
     };
     let clicked = (size.bounds().size().as_vec2() * pos).as_ivec2();
@@ -129,7 +147,7 @@ fn follow_mouse(
     mut cursor: Single<&mut UiTransform, With<CursorSlot>>,
     inv: InventoryCursor,
     styles: InventoryStyler,
-) {    
+) {
     let Some(pos) = window.cursor_position() else {
         return;
     };
@@ -144,7 +162,10 @@ fn follow_mouse(
             y -= shape.offset.y.abs() as f32 * style.cell_size.y;
         }
     }
-    cursor.translation = Val2 { x: Val::Px(x), y: Val::Px(y) }
+    cursor.translation = Val2 {
+        x: Val::Px(x),
+        y: Val::Px(y),
+    }
 }
 
 fn rotate_item(

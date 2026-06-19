@@ -3,10 +3,9 @@ use bevy::{
     prelude::*,
 };
 
-
-mod inventory;
 #[cfg(feature = "interaction")]
 mod interaction;
+mod inventory;
 #[cfg(feature = "rendering")]
 mod rendering;
 
@@ -15,18 +14,18 @@ pub mod egui_inspector;
 
 pub mod prelude {
     pub use crate::inventory::{
-        Inventory, Item, ItemDescriptor, Orientation, Shape, Layout,
-        CellType, inventory_relationship::*, FoundItem
+        CellType, FoundItem, Inventory, Item, ItemDescriptor, Layout, Orientation, Shape,
+        inventory_relationship::*,
     };
 
     pub use crate::inventory::manager::{AddFailed, InventoryCommands, InventoryManager};
 
     #[cfg(feature = "rendering")]
+    pub use crate::rendering::render_prelude::*;
+    #[cfg(feature = "rendering")]
     // pub use crate::mouse_interaction::MouseInventoryPlugin;
     #[cfg(feature = "tooltips")]
     pub use crate::rendering::tooltip::{ToolTipPlugin, ToolTipSettings};
-    #[cfg(feature = "rendering")]
-    pub use crate::rendering::render_prelude::*;
 }
 
 #[cfg(feature = "rendering")]
@@ -53,4 +52,3 @@ impl Plugin for PolyventoryPlugin {
         app.add_plugins(interaction::InteractionPlugin);
     }
 }
-

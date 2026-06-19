@@ -4,7 +4,7 @@ mod collision;
 pub use collision::AabbBox;
 
 mod orientation;
-pub use orientation::{Orientation, Operations};
+pub use orientation::{Operations, Orientation};
 
 #[derive(Reflect, Default, Debug, Clone)]
 pub struct Shape {
@@ -16,7 +16,11 @@ pub struct Shape {
 
 impl std::fmt::Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Shape {{ offset: (x:{}, y:{}),\norientation: {:?},\nlayout: {} }}", self.offset.x, self.offset.y, self.orientation, self.layout)
+        write!(
+            f,
+            "Shape {{ offset: (x:{}, y:{}),\norientation: {:?},\nlayout: {} }}",
+            self.offset.x, self.offset.y, self.orientation, self.layout
+        )
     }
 }
 
@@ -49,11 +53,11 @@ impl Shape {
     pub fn ui_transform(&self) -> UiTransform {
         let og = self.layout.size().as_vec2();
         let size = self.bounds().size().as_vec2();
-        // 90 degree 
+        // 90 degree
         // u = x - y / y * 0.5
         // v = -(x + y - 2) / x * 0.5
 
-        let scale = og/size;
+        let scale = og / size;
 
         // let t = match self.orientation {
         //     Orientation::DEG0 => Val2::ZERO,
@@ -73,11 +77,10 @@ impl Shape {
         UiTransform {
             translation: Val2::default(),
             rotation: self.rotation(),
-            scale: scale
+            scale: scale,
         }
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, Reflect)]
 pub enum Layout {
@@ -116,7 +119,9 @@ impl Layout {
 impl std::fmt::Display for Layout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Layout::Rect { size } => write!(f, "Rect {{ Width :{},\n Height :{} }}", size.x, size.y),
+            Layout::Rect { size } => {
+                write!(f, "Rect {{ Width :{},\n Height :{} }}", size.x, size.y)
+            }
         }
     }
 }
@@ -159,7 +164,6 @@ impl Iterator for ShapeIter {
         self.shape.next().map(|p| self.orentation.apply(p))
     }
 }
-
 
 pub struct OffsetIter<I: Iterator<Item = IVec2>> {
     iter: I,

@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use super::*;
+use bevy::prelude::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct AabbBox {
@@ -57,12 +57,19 @@ impl core::cmp::PartialOrd for AabbBox {
         // Self fits within other
         if self == other {
             Some(Ordering::Equal)
-        }
-        else if self.min.x >= other.min.x && self.max.x <= other.max.x && self.min.y >= other.min.y && self.max.y <= other.max.y {
+        } else if self.min.x >= other.min.x
+            && self.max.x <= other.max.x
+            && self.min.y >= other.min.y
+            && self.max.y <= other.max.y
+        {
             Some(Ordering::Less)
         }
         // Other fits within self
-        else if other.min.x >= self.min.x && other.max.x <= self.max.x && other.min.y >= self.min.y && other.max.y <= self.max.y {
+        else if other.min.x >= self.min.x
+            && other.max.x <= self.max.x
+            && other.min.y >= self.min.y
+            && other.max.y <= self.max.y
+        {
             Some(Ordering::Greater)
         }
         // they don't overlap or don't fit
@@ -73,17 +80,24 @@ impl core::cmp::PartialOrd for AabbBox {
 
     // self is completely outside other
     fn gt(&self, other: &Self) -> bool {
-        self.min.y > other.max.y || self.max.y < other.min.y || self.min.x > other.max.x || self.max.x < other.min.x
+        self.min.y > other.max.y
+            || self.max.y < other.min.y
+            || self.min.x > other.max.x
+            || self.max.x < other.min.x
     }
     // self is completely inside other
     fn lt(&self, other: &Self) -> bool {
-        self.min.y >= other.min.y && self.max.y <= other.max.y && self.min.x >= other.min.x && self.max.x <= other.max.x
+        self.min.y >= other.min.y
+            && self.max.y <= other.max.y
+            && self.min.x >= other.min.x
+            && self.max.x <= other.max.x
     }
     // self is within or colliding with other
     fn le(&self, other: &Self) -> bool {
-        other < self ||
-        (// selfs bottom edge is within other height
-        self.min.y >= other.min.y && self.min.y <= other.max.y
+        other < self
+            || (
+                // selfs bottom edge is within other height
+                self.min.y >= other.min.y && self.min.y <= other.max.y
         &&
         // self's bottom edge is within or wider than other's width
         self.min.x <= other.max.x && self.max.x >= other.min.x
@@ -104,7 +118,8 @@ impl core::cmp::PartialOrd for AabbBox {
         self.max.x >= other.min.x && self.max.x <= other.max.x
         &&
         // self's right edge is within or taller than other's height
-        self.min.y <= other.max.y && self.max.y >= other.min.y)
+        self.min.y <= other.max.y && self.max.y >= other.min.y
+            )
     }
     // self is colliding with other but not completely inside or outside
     fn ge(&self, other: &Self) -> bool {
@@ -245,7 +260,12 @@ fn collision_test() {
     // box3 is equal to box4
     assert_eq!(box3, box4);
     // box3 is within or colliding with box4
-    assert!(box3 <= box4, "{:?} should not collide with {:?}", box3, box4);
+    assert!(
+        box3 <= box4,
+        "{:?} should not collide with {:?}",
+        box3,
+        box4
+    );
     // box3 is not colliding with box4
     assert_fl!(box3 >= box4);
     // box3 is the exact same as box4
@@ -273,7 +293,6 @@ fn collision_test() {
     assert_fl!(box0 <= box2);
     assert_fl!(box0 <= box3);
     assert_fl!(box0 <= box4);
-
 }
 
 #[test]
@@ -282,7 +301,8 @@ fn water_then_backpack() {
     let water = AabbBox {
         min: IVec2::new(0, 0),
         max: IVec2::new(0, 3),
-    } * Orientation::DEG90 + IVec2::new(3, 9);
+    } * Orientation::DEG90
+        + IVec2::new(3, 9);
     let backpack = AabbBox {
         min: IVec2::new(0, 0),
         max: IVec2::new(12, 14),

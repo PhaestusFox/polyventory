@@ -1,5 +1,5 @@
-pub use bevy::prelude::*;
 pub use crate::rendering::render_prelude::*;
+pub use bevy::prelude::*;
 
 pub struct InventorySpritePlugin {
     pub auto_require: bool,

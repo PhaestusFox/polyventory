@@ -1,11 +1,24 @@
-use bevy::{asset::UntypedAssetId, ecs::{schedule::{BoxedCondition, SystemCondition}, system::IntoSystem, world::CommandQueue}};
 use bevy::prelude::*;
-use bevy_inspector_egui::{DefaultInspectorConfigPlugin, bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext}, egui::{self, mutex::Mutex}, reflect_inspector::{Context, InspectorUi}, restricted_world_view::RestrictedWorldView};
+use bevy::{
+    asset::UntypedAssetId,
+    ecs::{
+        schedule::{BoxedCondition, SystemCondition},
+        system::IntoSystem,
+        world::CommandQueue,
+    },
+};
+use bevy_inspector_egui::{
+    DefaultInspectorConfigPlugin,
+    bevy_egui::{EguiContext, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext},
+    egui::{self, mutex::Mutex},
+    reflect_inspector::{Context, InspectorUi},
+    restricted_world_view::RestrictedWorldView,
+};
 
 const DEFAULT_SIZE: (f32, f32) = (320., 160.);
 
 pub struct InventoryInspectorPlugin {
-    condition: Mutex<Option<BoxedCondition>>
+    condition: Mutex<Option<BoxedCondition>>,
 }
 
 impl Default for InventoryInspectorPlugin {
@@ -88,7 +101,10 @@ fn check_plugins(app: &App, name: &str) {
 }
 
 /// Display all assets of the specified asset type `A`
-pub fn ui_for_assets<A: Asset + Reflect>(world: &mut World, ui: &mut bevy_inspector_egui::egui::Ui) {
+pub fn ui_for_assets<A: Asset + Reflect>(
+    world: &mut World,
+    ui: &mut bevy_inspector_egui::egui::Ui,
+) {
     let asset_server = world.get_resource::<AssetServer>().cloned();
 
     let type_registry = world.resource::<AppTypeRegistry>().0.clone();
@@ -112,17 +128,22 @@ pub fn ui_for_assets<A: Asset + Reflect>(world: &mut World, ui: &mut bevy_inspec
     handles.sort_by(|a, b| a.cmp(b));
     for handle_id in handles {
         let id = egui::Id::new(handle_id);
-        let asset = assets.get_mut_untracked(handle_id).expect("This is a list of all current IDs");
-        if let Some(changed) = egui::CollapsingHeader::new(handle_name(handle_id.untyped(), asset_server.as_ref()))
-            .id_salt(id)
-            .show(ui, |ui| {
-                let mut env = InspectorUi::for_bevy(&type_registry, &mut cx);
-                env.ui_for_reflect_with_options(asset, ui, id, &())
-            }).body_returned {
-                if changed {
-                    assets.get_mut(handle_id); // reborrow the asset to mark it as changed
-                }
+        let asset = assets
+            .get_mut_untracked(handle_id)
+            .expect("This is a list of all current IDs");
+        if let Some(changed) =
+            egui::CollapsingHeader::new(handle_name(handle_id.untyped(), asset_server.as_ref()))
+                .id_salt(id)
+                .show(ui, |ui| {
+                    let mut env = InspectorUi::for_bevy(&type_registry, &mut cx);
+                    env.ui_for_reflect_with_options(asset, ui, id, &())
+                })
+                .body_returned
+        {
+            if changed {
+                assets.get_mut(handle_id); // reborrow the asset to mark it as changed
             }
+        }
     }
 
     queue.apply(world);

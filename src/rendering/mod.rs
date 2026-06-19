@@ -1,18 +1,21 @@
 use std::fmt::Debug;
 
-use bevy::{ecs::{lifecycle::HookContext, world::DeferredWorld}, prelude::*};
 use crate::prelude::*;
+use bevy::{
+    ecs::{lifecycle::HookContext, world::DeferredWorld},
+    prelude::*,
+};
 
-mod render;
 #[cfg(feature = "node_rendering")]
 pub mod node_render;
+mod render;
 
 #[cfg(feature = "sprite_rendering")]
 pub mod sprite_render;
 
+mod style;
 #[cfg(feature = "tooltips")]
 pub mod tooltip;
-mod style;
 
 pub mod render_prelude {
     pub use super::InventoryRenderPlugin;
@@ -41,7 +44,6 @@ impl Plugin for InventoryRenderPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<InventoryStyle>();
         style::register_default_style(app, self.default_inventory_style.as_ref());
-
 
         #[cfg(feature = "sprite_rendering")]
         app.add_plugins(sprite_render::InventorySpritePlugin {
@@ -74,7 +76,10 @@ impl Debug for RenderedInventory {
 
 impl RenderedInventory {
     pub fn new(inventory: Handle<Inventory>) -> Self {
-        Self { inventory, slots: Vec::new() }
+        Self {
+            inventory,
+            slots: Vec::new(),
+        }
     }
 
     pub fn get_slot(&self, index: usize) -> Option<Entity> {
@@ -82,10 +87,16 @@ impl RenderedInventory {
     }
 
     fn on_add(mut world: DeferredWorld, ctx: HookContext) {
-        let target: AssetId<Inventory> = world.get::<RenderedInventory>(ctx.entity).expect("This is RenderInventory OnAdd").into();
+        let target: AssetId<Inventory> = world
+            .get::<RenderedInventory>(ctx.entity)
+            .expect("This is RenderInventory OnAdd")
+            .into();
         let mut inventorys = world.resource_mut::<Assets<Inventory>>();
         let Some(inventory) = inventorys.get_mut_untracked(target) else {
-            warn!("Failed to find Inventory({:?}) for RenderedInventory({:?})", target, ctx.entity);
+            warn!(
+                "Failed to find Inventory({:?}) for RenderedInventory({:?})",
+                target, ctx.entity
+            );
             return;
         };
         inventory.add_renderer(ctx.entity);

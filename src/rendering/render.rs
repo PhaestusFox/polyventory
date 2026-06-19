@@ -1,7 +1,10 @@
 use std::ops::DerefMut;
 
 use bevy::{
-    image::{ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor}, platform::collections::HashMap, sprite::Anchor, ui
+    image::{ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
+    platform::collections::HashMap,
+    sprite::Anchor,
+    ui,
 };
 
 use super::*;
@@ -18,4 +21,3 @@ pub struct RenderedItem {
 #[derive(Component, Default, Reflect)]
 #[relationship_target(relationship = RenderedItem)]
 pub struct RenderingItem(Vec<Entity>);
-

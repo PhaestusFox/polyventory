@@ -21,7 +21,6 @@ fn spawn_cursor_icon(mut commands: Commands, cursor: Res<CursorInventory>) {
     ));
 }
 
-
 pub fn detect_hover_slot(
     event: On<Pointer<Over>>,
     style: InventoryStyler,

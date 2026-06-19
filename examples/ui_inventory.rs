@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use bevy::{asset::AssetPath, input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*};
+use bevy::{
+    asset::AssetPath, input::common_conditions::input_just_pressed, log::LogPlugin, prelude::*,
+};
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use polyventory::prelude::*;
 use rand::{RngExt, seq::IndexedRandom};
@@ -9,24 +11,27 @@ fn main() {
     let mut app = App::new();
     let mut filter = bevy::log::DEFAULT_FILTER.to_string();
     filter.push_str("polyventory=trace,");
-    app.add_plugins(DefaultPlugins
-        .set(ImagePlugin::default_nearest())
-        .set(LogPlugin {
-        filter: filter,
-        ..Default::default()
-    }));
+    app.add_plugins(
+        DefaultPlugins
+            .set(ImagePlugin::default_nearest())
+            .set(LogPlugin {
+                filter: filter,
+                ..Default::default()
+            }),
+    );
     app.add_plugins(EguiPlugin::default())
-    .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
+        .add_plugins(bevy_inspector_egui::quick::WorldInspectorPlugin::new());
 
-    app.add_plugins(polyventory::PolyventoryPlugin)
-    .add_plugins(polyventory::InventoryRenderPlugin {
-        default_inventory_style: Some(polyventory::prelude::InventoryStyleAsset {
-            cell_size: Vec2::new(10.0, 10.0),
-            cell_icon: Some("bbg/ui/GUICell.png".to_string()),
-            background: None,
-        }),
-        pipeline: InventoryRenderPipeline::Node,
-    });
+    app.add_plugins(polyventory::PolyventoryPlugin).add_plugins(
+        polyventory::InventoryRenderPlugin {
+            default_inventory_style: Some(polyventory::prelude::InventoryStyleAsset {
+                cell_size: Vec2::new(10.0, 10.0),
+                cell_icon: Some("bbg/ui/GUICell.png".to_string()),
+                background: None,
+            }),
+            pipeline: InventoryRenderPipeline::Node,
+        },
+    );
     app.insert_resource(polyventory::prelude::ToolTipSettings {
         debug_info: true,
         ..Default::default()
@@ -41,7 +46,6 @@ fn main() {
     app.init_state::<Loaded>();
     app.add_systems(Update, check_loaded.run_if(in_state(Loaded::False)));
     app.add_plugins(polyventory::egui_inspector::InventoryInspectorPlugin::default());
-    
 
     app.add_systems(Update, kill);
     app.add_systems(Update, detect_drop);
@@ -108,7 +112,10 @@ impl FromWorld for LootTable {
             asset_server.load("items/lighter.item"),
             asset_server.load("items/Athletic.item"),
         ];
-        Self { items, fixed: known }
+        Self {
+            items,
+            fixed: known,
+        }
     }
 }
 
@@ -119,12 +126,18 @@ fn spawn_inventory(
     mut styles: ResMut<Assets<InventoryStyle>>,
     asset_server: Res<AssetServer>,
 ) {
-    let (test_inventory_handle, mut test_inventory) = inventory_manager.create_inventory("Test Inventory");
-    test_inventory.add_slot(CellType::Untyped, Shape {
-        offset: IVec2::ZERO,
-        orientation: Orientation::DEG0,
-        layout: Layout::Rect { size: UVec2::new(50, 30) },
-    });
+    let (test_inventory_handle, mut test_inventory) =
+        inventory_manager.create_inventory("Test Inventory");
+    test_inventory.add_slot(
+        CellType::Untyped,
+        Shape {
+            offset: IVec2::ZERO,
+            orientation: Orientation::DEG0,
+            layout: Layout::Rect {
+                size: UVec2::new(50, 30),
+            },
+        },
+    );
     let item_container = test_inventory.commands.spawn(Name::new("ITEMS")).id();
     let empty_bottle = loot.items[0].clone();
     let bottle = match test_inventory.spawn_item(empty_bottle.clone()) {
@@ -133,44 +146,68 @@ fn spawn_inventory(
             panic!("Failed to spawn empty bottle: {:?}", f);
         }
     };
-    test_inventory.commands.entity(bottle).insert(ChildOf(item_container));
+    test_inventory
+        .commands
+        .entity(bottle)
+        .insert(ChildOf(item_container));
     match test_inventory.spawn_item_at(empty_bottle, IVec2::new(0, 0), Orientation::DEG180) {
         Ok(e) => {
-            test_inventory.commands.entity(e).insert(ChildOf(item_container));
-        },
+            test_inventory
+                .commands
+                .entity(e)
+                .insert(ChildOf(item_container));
+        }
         Err(f) => {
             error!("Failed to spawn empty bottle: {:?}", f);
         }
     };
     _ = dbg!(test_inventory.remove_item(bottle));
     let water_bottle = loot.items[1].clone();
-    let r = test_inventory.spawn_item_at(
-        water_bottle.clone(),
-        IVec2::new(1, 8),
-        Orientation::DEG270,
-    );
+    let r =
+        test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::DEG270);
     info!(
         "Spawning water bottle at 1,8 with identity orientation: {:?}",
         r
     );
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::DEG90);
+    let r =
+        test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 8), Orientation::DEG90);
     info!("Spawning water bottle at 1,8 with 90 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 7), Orientation::DEG180);
+    let r =
+        test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(1, 7), Orientation::DEG180);
     info!("Spawning water bottle at 1,7 with 180 rotation: {:?}", r);
-    let r = test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::DEG270);
+    let r =
+        test_inventory.spawn_item_at(water_bottle.clone(), IVec2::new(3, 9), Orientation::DEG270);
     info!("Spawning water bottle at 3,9 with 270 rotation: {:?}", r);
 
     let mut rng = rand::rng();
-    let rotations = [Orientation::DEG0, Orientation::DEG90, Orientation::DEG180, Orientation::DEG270];
+    let rotations = [
+        Orientation::DEG0,
+        Orientation::DEG90,
+        Orientation::DEG180,
+        Orientation::DEG270,
+    ];
     let mut spawned = 0;
     while spawned < 50 {
-        let item = loot.items.choose(&mut rng).expect("At least one item").clone();
-        let orientation = *rotations.choose(&mut rng).expect("At least one orientation");
-        match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..50), rng.random_range(0..30)), orientation) {
+        let item = loot
+            .items
+            .choose(&mut rng)
+            .expect("At least one item")
+            .clone();
+        let orientation = *rotations
+            .choose(&mut rng)
+            .expect("At least one orientation");
+        match test_inventory.spawn_item_at(
+            item,
+            IVec2::new(rng.random_range(0..50), rng.random_range(0..30)),
+            orientation,
+        ) {
             Ok(e) => {
-                test_inventory.commands.entity(e).insert(ChildOf(item_container));
+                test_inventory
+                    .commands
+                    .entity(e)
+                    .insert(ChildOf(item_container));
                 spawned += 1;
-            },
+            }
             Err(f) => error!("Failed to spawn random item: {:?}", f),
         }
     }
@@ -223,14 +260,14 @@ fn spawn_inventory(
         },
     ));
     commands.spawn((
-    RenderedInventory::new(test_inventory_handle.clone()),
-    InventoryNode,
-    Name::new("Test Inventory Node"),
-    InventoryStyleHandle(style),
-    Node {
-        margin: UiRect::all(Val::Auto),
-        ..Default::default()
-    }
+        RenderedInventory::new(test_inventory_handle.clone()),
+        InventoryNode,
+        Name::new("Test Inventory Node"),
+        InventoryStyleHandle(style),
+        Node {
+            margin: UiRect::all(Val::Auto),
+            ..Default::default()
+        },
     ));
 }
 
@@ -243,9 +280,7 @@ fn kill(mut commands: Commands, items: Populated<Entity, With<Kill>>) {
     }
 }
 
-fn detect_drop(
-    mut messages: MessageReader<AssetEvent<Inventory>>,
-) {
+fn detect_drop(mut messages: MessageReader<AssetEvent<Inventory>>) {
     for message in messages.read() {
         match message {
             AssetEvent::Removed { id } => info!("Received inventory asset event: {:?}", id),

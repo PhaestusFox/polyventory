@@ -1,4 +1,9 @@
-use bevy::{ecs::{entity::EntityHashMap, system::SystemParam}, math::bounding::Aabb2d, platform::collections::{HashMap, HashSet}, prelude::*};
+use bevy::{
+    ecs::{entity::EntityHashMap, system::SystemParam},
+    math::bounding::Aabb2d,
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+};
 
 mod item;
 pub mod manager;
@@ -41,7 +46,10 @@ impl Inventory {
     }
 
     /// Creates a new inventory with the specified width, height, and slots.
-    pub fn new_with_slots(name: impl Into<String>, slots: impl Iterator<Item = (CellType, Shape)>) -> Self {
+    pub fn new_with_slots(
+        name: impl Into<String>,
+        slots: impl Iterator<Item = (CellType, Shape)>,
+    ) -> Self {
         let mut inventory = Self::new(name);
         for (cell_type, shape) in slots {
             inventory.add_slot(cell_type, shape);
@@ -152,8 +160,12 @@ impl Inventory {
         let Some(slot_shape) = self.slots.get(cell_type) else {
             return false;
         };
-        if let CellType::Any = cell_type && (item_shape.layout != Layout::Rect { size: UVec2::ONE }) {
-            return self.fit(cell_type, &Layout::Rect { size: UVec2::ONE }).is_some();
+        if let CellType::Any = cell_type
+            && (item_shape.layout != Layout::Rect { size: UVec2::ONE })
+        {
+            return self
+                .fit(cell_type, &Layout::Rect { size: UVec2::ONE })
+                .is_some();
         }
         if !slot_shape.can_fit(item_shape) {
             return false;
@@ -207,23 +219,36 @@ impl Inventory {
         self.items.get_mut(&item).map(|entry| &mut entry.shape)
     }
 
-    pub fn find(&self, item: Entity, assets: &Assets<Inventory>, checked: &mut HashSet<AssetId<Inventory>>) -> Option<FoundItem> {
+    pub fn find(
+        &self,
+        item: Entity,
+        assets: &Assets<Inventory>,
+        checked: &mut HashSet<AssetId<Inventory>>,
+    ) -> Option<FoundItem> {
         if self.contains(item) {
             return Some(FoundItem::InSelf);
         }
         for entry in self.iter_sub_inventories() {
             if checked.contains(&entry) {
-                error!("Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.", entry, item);
+                error!(
+                    "Inventory {:?} has a circular reference. Already checked this inventory while looking for item {:?}. Skipping.",
+                    entry, item
+                );
                 continue;
             }
             checked.insert(entry);
             let Some(inventory) = assets.get(entry) else {
-                warn!("Failed to get inventory {:?} while trying to find item {:?}. Skipping.", entry, item);
+                warn!(
+                    "Failed to get inventory {:?} while trying to find item {:?}. Skipping.",
+                    entry, item
+                );
                 continue;
             };
             match inventory.find(item, assets, checked) {
                 Some(FoundItem::InSelf) => return Some(FoundItem::InSubInventory(entry)),
-                Some(FoundItem::InSubInventory(sub)) => return Some(FoundItem::InSubInventory(sub)),
+                Some(FoundItem::InSubInventory(sub)) => {
+                    return Some(FoundItem::InSubInventory(sub));
+                }
                 None => continue,
             }
         }
@@ -241,7 +266,13 @@ impl Inventory {
     pub fn add_any(&mut self, item: Entity, mut shape: Shape) -> bool {
         if let Some(fit) = self.fit(&CellType::Any, &Layout::Rect { size: UVec2::ONE }) {
             shape.offset = fit.offset;
-            self.insert_item(item, entry::Entry { shape, sub_inventory: None });
+            self.insert_item(
+                item,
+                entry::Entry {
+                    shape,
+                    sub_inventory: None,
+                },
+            );
             true
         } else {
             false

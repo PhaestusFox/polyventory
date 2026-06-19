@@ -1,4 +1,7 @@
-use std::{hash::{Hash, Hasher}, str::FromStr};
+use std::{
+    hash::{Hash, Hasher},
+    str::FromStr,
+};
 
 use bevy::{
     asset::{AssetLoader, AsyncReadExt},
@@ -64,11 +67,10 @@ pub struct ItemDescriptor {
 }
 
 impl ItemDescriptor {
-    
     pub fn name(&self) -> &str {
         &self.name
     }
-    
+
     pub fn size(&self, slot: &CellType) -> Option<Layout> {
         for (slot_type, layout) in &self.size {
             if slot_type == slot {
@@ -78,9 +80,12 @@ impl ItemDescriptor {
         None
     }
     pub fn get_image(&self, slot: &CellType) -> Option<(Handle<Image>, UVec2)> {
-        self.image.get(slot).cloned().or_else(|| self.image.first().map(|(_, i)| i).cloned())
+        self.image
+            .get(slot)
+            .cloned()
+            .or_else(|| self.image.first().map(|(_, i)| i).cloned())
     }
-    
+
     pub fn image(&self, slot: impl Iterator<Item = CellType>) -> Option<(Handle<Image>, UVec2)> {
         for slot_type in slot {
             for (image_slot, image) in &self.image {
@@ -91,34 +96,42 @@ impl ItemDescriptor {
         }
         self.image.first().map(|(_, i)| i).cloned()
     }
-    
+
     pub fn valid_images(&self) -> impl Iterator<Item = (&CellType, &(Handle<Image>, UVec2))> {
         self.image
-        .iter()
-        .map(|(slot_type, image)| (slot_type, image))
+            .iter()
+            .map(|(slot_type, image)| (slot_type, image))
     }
-    
+
     pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
-    
+
     pub fn spawn(&self) -> impl Bundle {}
-    
+
     pub fn is_moveable(&self) -> bool {
         true
     }
     pub fn sub_inventory(&self) -> Option<&Handle<InventoryDescriptor>> {
         self.sub_inventory.as_ref()
     }
-    
+
     pub fn sizes(&self) -> impl Iterator<Item = &(CellType, Layout)> {
-        const FALL_BACK: (CellType, Layout) = (CellType::Any, Layout::Rect { size: UVec2::new(1, 1) });
+        const FALL_BACK: (CellType, Layout) = (
+            CellType::Any,
+            Layout::Rect {
+                size: UVec2::new(1, 1),
+            },
+        );
         self.size.iter().chain(&[FALL_BACK])
     }
 
     pub fn tint(&self, cell: &CellType) -> Option<Color> {
-        self.tint.get(cell).cloned().or_else(|| self.tint.first().map(|(_, s)| *s))
-    } 
+        self.tint
+            .get(cell)
+            .cloned()
+            .or_else(|| self.tint.first().map(|(_, s)| *s))
+    }
 }
 
 #[derive(TypePath, Default)]
@@ -156,7 +169,8 @@ impl AssetLoader for ItemDescriptorLoader {
             } else {
                 (pre, post.split("[item]"))
             };
-            let main: Result<ItemDescriptor, LoadItemDescriptorError> = load_item_descriptor(main, load_context);
+            let main: Result<ItemDescriptor, LoadItemDescriptorError> =
+                load_item_descriptor(main, load_context);
             for block in rest {
                 let mut l = load_context.begin_labeled_asset();
                 let new = load_item_descriptor(block, &mut l)?;
@@ -208,64 +222,51 @@ fn load_item_descriptor(
     let mut description: Option<String> = None;
     let mut sub_inventory: Option<Handle<InventoryDescriptor>> = None;
     let mut tints: IndexMap<CellType, Color> = IndexMap::new();
-    let mut lines = data.lines().peekable();
     let mut icon_components = Vec::new();
-    while let Some(line) = lines.next() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('[') {
+    let mut used = 0;
+    while let Some(((head, body), consumed)) = extract_segment(&data[used..]) {
+        used += consumed;
+        if head.is_empty() || head.starts_with('[') {
+            trace!("Found empty segment: {}-{}", used - consumed, used);
             continue;
-        }
-        if set_mode(line, &mut mode) {
-            continue;
-        }
+        };
+        set_mode(head, &mut mode);
         match mode {
             Mode::Description => {
                 if let Some(desc) = description.as_mut() {
                     desc.push('\n');
-                    desc.push_str(line);
+                    desc.push_str(head);
                 } else {
-                    description = Some(line.to_string());
+                    description = Some(head.to_string());
                 }
             }
             Mode::Inventory => {
-                let Some((_, path)) = line.split_once(':') else {
-                    warn!("Inventory line start does not contain ':'");
-                    continue;
-                };
-                let path = path.trim();
-                if !path.is_empty() {
+                if !body.contains('{') {
+                    panic!("going to load sub inv: {:?}", body);
                     if sub_inventory.is_some() {
-                        warn!("Multiple inventory blocks found in item descriptor, only the first one will be used");
+                        warn!(
+                            "Multiple inventory blocks found in item descriptor, only the first one will be used"
+                        );
                         continue;
                     }
-                    sub_inventory = Some(ctx.load(path.to_string()));
+                    sub_inventory = Some(ctx.load(body.to_string()));
                     continue;
                 }
-                let mut inv_data = String::new();
-                while let Some(line) = lines.next() {
-                    let line = line.trim();
-                    inv_data.push_str(line);
-                    if line.ends_with('}') {
-                        break;
-                    }
-                    inv_data.push('\n');
-                }
-                let i = crate::inventory::inventory_descriptor::InventoryDescriptor::from_str(&inv_data)?;
+                let i =
+                    crate::inventory::inventory_descriptor::InventoryDescriptor::from_str(&body)?;
                 sub_inventory = Some(ctx.add_labeled_asset(format!("{}.inventory", name), i));
             }
             Mode::Tint => {
-                let Some((cell, rest)) = line.split_once(':') else {
+                let Some((cell, rest)) = body.split_once(':') else {
                     return Err(LoadItemDescriptorError::MissingColin);
                 };
                 let cell = CellType::from_str(cell).expect("Infallible");
                 let color = parse_color(rest).ok_or(LoadItemDescriptorError::FailedToParseColor)?;
                 tints.insert(cell, color);
-            },
-            Mode::Components {
-                let block = extract_block();
-            },
+            }
+            Mode::Components => {}
             _ => {
-                mode.parse_line(line, &mut name, &mut size, &mut image, ctx)?;
+                mode.parse_line(body, &mut name, &mut size, &mut image, ctx)?;
             }
         }
     }
@@ -354,7 +355,10 @@ impl Mode {
                 let image_handle: Handle<Image> = ctx.load(path);
                 match image.entry(slot_type) {
                     indexmap::map::Entry::Occupied(e) => {
-                        warn!("Multiple images specified for slot type {:?}, only the first one will be used", e.key());
+                        warn!(
+                            "Multiple images specified for slot type {:?}, only the first one will be used",
+                            e.key()
+                        );
                     }
                     indexmap::map::Entry::Vacant(entry) => {
                         entry.insert((image_handle, size));
@@ -394,7 +398,9 @@ impl Mode {
             .map_err(|_| LoadItemDescriptorError::InvalidSize("y", y.to_string()))?;
         Ok((
             slot_type.parse().unwrap(),
-            Layout::Rect { size: UVec2::new(x, y) },
+            Layout::Rect {
+                size: UVec2::new(x, y),
+            },
         ))
     }
 
@@ -444,32 +450,35 @@ fn parse_color(color: &str) -> Option<Color> {
         unimplemented!("Raw color paring is not done yet");
     }
     use bevy::color::palettes::basic::*;
-    Some(match color.to_ascii_uppercase().as_ref() {
-        "AQUA" => AQUA,
-        "BLACK" => BLACK,
-        "BLUE" => BLUE,
-        "FUCHSIA" => FUCHSIA,
-        "GRAY" => GRAY,
-        "GREEN" => GREEN,
-        "LIME" => LIME,
-        "MAROON" => MAROON,
-        "NAVY" => NAVY,
-        "OLIVE" => OLIVE,
-        "PURPLE" => PURPLE,
-        "RED" => RED,
-        "SILVER" => SILVER,
-        "TEAL" => TEAL,
-        "WHITE" => WHITE,
-        "YELLOW" => YELLOW,
-        other => {
-            let mut m = std::hash::DefaultHasher::default();
-            other.hash(&mut m);
-            let id = m.finish() as i64;
-            let a = id & 0xFF - (id >> 8) & 0x1FF;
-            let b = (id >> 17) & 0xFF - (id >> 26) & 0x1FF;
-            Color::oklab(1., a as f32 / 256., b as f32 / 256.).to_srgba()
-        },
-    }.into())
+    Some(
+        match color.to_ascii_uppercase().as_ref() {
+            "AQUA" => AQUA,
+            "BLACK" => BLACK,
+            "BLUE" => BLUE,
+            "FUCHSIA" => FUCHSIA,
+            "GRAY" => GRAY,
+            "GREEN" => GREEN,
+            "LIME" => LIME,
+            "MAROON" => MAROON,
+            "NAVY" => NAVY,
+            "OLIVE" => OLIVE,
+            "PURPLE" => PURPLE,
+            "RED" => RED,
+            "SILVER" => SILVER,
+            "TEAL" => TEAL,
+            "WHITE" => WHITE,
+            "YELLOW" => YELLOW,
+            other => {
+                let mut m = std::hash::DefaultHasher::default();
+                other.hash(&mut m);
+                let id = m.finish() as i64;
+                let a = id & 0xFF - (id >> 8) & 0x1FF;
+                let b = (id >> 17) & 0xFF - (id >> 26) & 0x1FF;
+                Color::oklab(1., a as f32 / 256., b as f32 / 256.).to_srgba()
+            }
+        }
+        .into(),
+    )
 }
 
 fn extract_segment(src: &str) -> Option<((&str, &str), usize)> {
@@ -489,25 +498,29 @@ fn extract_segment(src: &str) -> Option<((&str, &str), usize)> {
         }
         if char == ':' && split == 0 {
             split = i + 1;
-            if let Some((block, used)) = extract_block(&src[i+1..]) {
+            if let Some((block, used)) = extract_block(&src[i + 1..]) {
                 return Some(((&src[start..split], block), i + used));
             }
         }
     }
-    todo!()
+    None
 }
 
 fn extract_block(src: &str) -> Option<(&str, usize)> {
     let mut stack = Vec::new();
     let mut start = 0;
     for (i, char) in src.char_indices() {
-        let Some(block) = BlockType::from_char(char) else {continue;};
+        let Some(block) = BlockType::from_char(char) else {
+            continue;
+        };
         if BlockType::open(char) {
             if stack.is_empty() {
                 start = i;
             }
             stack.push(block);
-        } else if let Some(&b) = stack.last() && b == block {
+        } else if let Some(&b) = stack.last()
+            && b == block
+        {
             stack.pop();
             if stack.is_empty() {
                 return Some((&src[start..i], i));
@@ -522,7 +535,7 @@ enum BlockType {
     Par,
     Curl,
     Square,
-    Angle
+    Angle,
 }
 
 impl BlockType {
@@ -532,11 +545,11 @@ impl BlockType {
             '{' | '}' => Some(BlockType::Curl),
             '[' | ']' => Some(BlockType::Square),
             '<' | '>' => Some(BlockType::Angle),
-            _ => None
+            _ => None,
         }
     }
     fn open(c: char) -> bool {
-        matches!(c,  '(' | '{' | '[' | '<' )
+        matches!(c, '(' | '{' | '[' | '<')
     }
 }
 
@@ -591,7 +604,7 @@ impl BlockType {
 //         Untyped: bbg/ui/Skill.png, 6, 2
 //         tint:
 //         Untyped: blue
-//         icon: 
+//         icon:
 //         {
 //             components: []+,
 //             {child_components: []}*,
