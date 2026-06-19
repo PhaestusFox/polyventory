@@ -106,6 +106,7 @@ impl FromWorld for LootTable {
             asset_server.load("items/tarp.item"),
             asset_server.load("items/battery_phone.item"),
             asset_server.load("items/lighter.item"),
+            asset_server.load("items/Athletic.item"),
         ];
         Self { items, fixed: known }
     }
@@ -122,7 +123,7 @@ fn spawn_inventory(
     test_inventory.add_slot(CellType::Untyped, Shape {
         offset: IVec2::ZERO,
         orientation: Orientation::DEG0,
-        layout: Layout::Rect { size: UVec2::new(5, 7) },
+        layout: Layout::Rect { size: UVec2::new(50, 30) },
     });
     let item_container = test_inventory.commands.spawn(Name::new("ITEMS")).id();
     let empty_bottle = loot.items[0].clone();
@@ -165,7 +166,7 @@ fn spawn_inventory(
     while spawned < 50 {
         let item = loot.items.choose(&mut rng).expect("At least one item").clone();
         let orientation = *rotations.choose(&mut rng).expect("At least one orientation");
-        match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..30), rng.random_range(0..50)), orientation) {
+        match test_inventory.spawn_item_at(item, IVec2::new(rng.random_range(0..50), rng.random_range(0..30)), orientation) {
             Ok(e) => {
                 test_inventory.commands.entity(e).insert(ChildOf(item_container));
                 spawned += 1;
@@ -173,6 +174,8 @@ fn spawn_inventory(
             Err(f) => error!("Failed to spawn random item: {:?}", f),
         }
     }
+    let item = loot.fixed[3].clone();
+    _ = test_inventory.spawn_item(item);
     // let item = loot.fixed[0].clone();
     // let container = test_inventory.commands.spawn(Name::new("fill")).id();
     // while let Ok(e) = test_inventory.spawn_item(item.clone()) {

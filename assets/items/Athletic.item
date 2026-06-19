@@ -1,0 +1,13 @@
+[item]
+name: Athletic
+size:
+Untyped: 6, 2
+image:
+Untyped: bbg/ui/Skill.png, 6, 2
+tint:
+Untyped: blue
+icon: 
+{
+    components: []+,
+    {child_components: []}*,
+}

@@ -11,6 +11,8 @@ strum = "0.28"
 indexmap = "*"
 bitflags = "2"
 bevy-inspector-egui = {version = "*", optional = true}
+ron = "*"
+serde = "*"
 
 
 [dev-dependencies]

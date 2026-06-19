@@ -5,6 +5,7 @@ use bevy::{
     ecs::{lifecycle::HookContext, world::DeferredWorld},
 };
 use indexmap::IndexMap;
+use serde::Deserialize;
 
 use crate::inventory::inventory_descriptor::InventoryDescriptorParseError;
 
@@ -59,6 +60,7 @@ pub struct ItemDescriptor {
     image: IndexMap<CellType, (Handle<Image>, UVec2)>,
     tint: IndexMap<CellType, Color>,
     sub_inventory: Option<Handle<InventoryDescriptor>>,
+    icon_components: Vec<Box<dyn Reflect>>,
 }
 
 impl ItemDescriptor {
@@ -207,6 +209,7 @@ fn load_item_descriptor(
     let mut sub_inventory: Option<Handle<InventoryDescriptor>> = None;
     let mut tints: IndexMap<CellType, Color> = IndexMap::new();
     let mut lines = data.lines().peekable();
+    let mut icon_components = Vec::new();
     while let Some(line) = lines.next() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('[') {
@@ -258,6 +261,9 @@ fn load_item_descriptor(
                 let color = parse_color(rest).ok_or(LoadItemDescriptorError::FailedToParseColor)?;
                 tints.insert(cell, color);
             },
+            Mode::Components {
+                let block = extract_block();
+            },
             _ => {
                 mode.parse_line(line, &mut name, &mut size, &mut image, ctx)?;
             }
@@ -271,6 +277,7 @@ fn load_item_descriptor(
         image,
         sub_inventory,
         tint: tints,
+        icon_components,
     };
 
     Ok(item)
@@ -296,6 +303,9 @@ fn set_mode(line: &str, mode: &mut Mode) -> bool {
     } else if line.starts_with("tint") {
         *mode = Mode::Tint;
         true
+    } else if line.starts_with("components") {
+        *mode = Mode::Components;
+        false
     } else {
         false
     }
@@ -309,6 +319,7 @@ enum Mode {
     Description,
     Inventory,
     Tint,
+    Components,
 }
 
 impl Mode {
@@ -460,3 +471,132 @@ fn parse_color(color: &str) -> Option<Color> {
         },
     }.into())
 }
+
+fn extract_segment(src: &str) -> Option<((&str, &str), usize)> {
+    let mut start = usize::MAX;
+    let mut split = 0;
+    let mut chars = src.char_indices();
+    while let Some((i, char)) = chars.next() {
+        if char == '\n' && start != usize::MAX {
+            return Some(((&src[start..split], &src[split..i]), i));
+        }
+        if char.is_whitespace() {
+            continue;
+        }
+        if start == usize::MAX {
+            start = i;
+            split = i;
+        }
+        if char == ':' && split == 0 {
+            split = i + 1;
+            if let Some((block, used)) = extract_block(&src[i+1..]) {
+                return Some(((&src[start..split], block), i + used));
+            }
+        }
+    }
+    todo!()
+}
+
+fn extract_block(src: &str) -> Option<(&str, usize)> {
+    let mut stack = Vec::new();
+    let mut start = 0;
+    for (i, char) in src.char_indices() {
+        let Some(block) = BlockType::from_char(char) else {continue;};
+        if BlockType::open(char) {
+            if stack.is_empty() {
+                start = i;
+            }
+            stack.push(block);
+        } else if let Some(&b) = stack.last() && b == block {
+            stack.pop();
+            if stack.is_empty() {
+                return Some((&src[start..i], i));
+            }
+        }
+    }
+    None
+}
+
+#[derive(PartialEq, Eq, Clone, Copy)]
+enum BlockType {
+    Par,
+    Curl,
+    Square,
+    Angle
+}
+
+impl BlockType {
+    fn from_char(c: char) -> Option<BlockType> {
+        match c {
+            '(' | ')' => Some(BlockType::Par),
+            '{' | '}' => Some(BlockType::Curl),
+            '[' | ']' => Some(BlockType::Square),
+            '<' | '>' => Some(BlockType::Angle),
+            _ => None
+        }
+    }
+    fn open(c: char) -> bool {
+        matches!(c,  '(' | '{' | '[' | '<' )
+    }
+}
+
+// impl<'de> Deserialize<'de> for ItemDescriptor {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>
+//     {
+//         deserializer.deserialize_map(ItemVisitor)
+//     }
+// }
+
+// struct ItemVisitor;
+
+// impl<'de> serde::de::Visitor<'de> for ItemVisitor {
+//     type Value = ItemDescriptor;
+//     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         formatter.write_str("IDK what im doing")
+//     }
+//     fn visit_map<A>(self, map: A) -> std::prelude::v1::Result<Self::Value, A::Error>
+//     where
+//         A: serde::de::MapAccess<'de>,
+//     {
+//         map.next_entry();
+//         ron::Deserializer
+//         todo!()
+//     }
+//     fn visit_enum<A>(self, data: A) -> std::prelude::v1::Result<Self::Value, A::Error>
+//     where
+//         A: serde::de::EnumAccess<'de>,
+//     {
+//         let v = data.variant::<String>().unwrap();
+//     }
+// }
+
+// #[non_exhaustive]
+// #[repr(u8)]
+// #[derive(Debug)]
+// enum Test {
+//     A,
+//     B,
+//     C
+// }
+
+// #[test]
+// fn try_custom_serde() {
+//     let item = ron::from_str::<ItemDescriptor>("{
+//         name: Athletic
+//         size:
+//         Untyped: 6, 2
+//         image:
+//         Untyped: bbg/ui/Skill.png, 6, 2
+//         tint:
+//         Untyped: blue
+//         icon: 
+//         {
+//             components: []+,
+//             {child_components: []}*,
+//         }
+//     }").unwrap();
+//     let truth: Vec<Box<dyn Reflect>> = vec![];
+//     assert!(item.icon_components.iter().zip(truth.iter()).all(|(a, b)| a.reflect_partial_eq(b.as_partial_reflect()).unwrap_or_default()));
+// }
