@@ -19,7 +19,7 @@ pub struct ToolTipPlugin;
 
 impl Plugin for ToolTipPlugin {
     fn build(&self, app: &mut App) {
-        if !app.is_plugin_added::<bevy::feathers::FeathersPlugin>() {
+        if !app.is_plugin_added::<bevy::feathers::FeathersCorePlugin>() {
             app.add_plugins(bevy::feathers::FeathersPlugins);
             use feathers::theme::UiTheme;
             app.insert_resource(UiTheme(feathers::dark_theme::create_dark_theme()));
@@ -252,7 +252,7 @@ fn show_item_tooltip(
             ..Default::default()
         },
         TextFont {
-            font_size: 20.,
+            font_size: FontSize::Px(20.),
             ..Default::default()
         },
         ChildOf(tooltip.root()),
@@ -267,7 +267,7 @@ fn show_item_tooltip(
                 ..Default::default()
             },
             TextFont {
-                font_size: 16.,
+                font_size: FontSize::Px(16.),
                 ..Default::default()
             },
             ChildOf(tooltip.root()),
@@ -294,7 +294,7 @@ fn show_item_tooltip(
                         ..Default::default()
                     },
                     TextFont {
-                        font_size: 20.,
+                        font_size: FontSize::Px(20.),
                         ..Default::default()
                     },
                 ));

@@ -263,8 +263,15 @@ fn load_item_descriptor(
                 let cell = CellType::from_str(cell).expect("Infallible");
                 let color = parse_color(rest).ok_or(LoadItemDescriptorError::FailedToParseColor)?;
                 tints.insert(cell, color);
+<<<<<<< Updated upstream
             }
             Mode::Components => {}
+=======
+            },
+            // Mode::Components {
+            //     let block = extract_block();
+            // },
+>>>>>>> Stashed changes
             _ => {
                 mode.parse_line(body, &mut name, &mut size, &mut image, ctx)?;
             }

@@ -16,7 +16,7 @@ impl Into<AssetId<Inventory>> for &ItemInventory {
 }
 
 #[derive(Debug, Component, Reflect, Clone)]
-#[component(immutable, on_replace = Self::remove_from_inventory)]
+#[component(immutable, on_discard = Self::remove_from_inventory)]
 /// the inventory this item is in
 pub struct InInventory(pub AssetId<Inventory>, pub CellType);
 
@@ -34,7 +34,7 @@ impl InInventory {
             ctx.entity, inventory
         );
         let mut assets = world.resource_mut::<Assets<Inventory>>();
-        let Some(inventory) = assets.get_mut(inventory) else {
+        let Some(mut inventory) = assets.get_mut(inventory) else {
             warn!("Inventory {:?} no longer exists", inventory);
             return;
         };

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.18", default-features = false }
+bevy = { version = "0.19", default-features = false }
 thiserror = "2"
 strum_macros = "0.28"
 strum = "0.28"
@@ -16,7 +16,7 @@ serde = "*"
 
 
 [dev-dependencies]
-bevy = { version = "0.18", features = ["default", "track_location"] }
+bevy = { version = "0.19", features = ["default", "track_location"] }
 rand = "*"
 
 [features]
@@ -26,7 +26,7 @@ node_rendering = ["rendering"]
 sprite_rendering = ["rendering"]
 mouse_interaction = ["interaction", "rendering"]
 interaction = []
-tooltips = ["bevy/experimental_bevy_feathers", "rendering"]
+tooltips = ["bevy/bevy_feathers", "rendering"]
 inspector = ["dep:bevy-inspector-egui"]
 
 [[example]]

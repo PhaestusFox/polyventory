@@ -217,11 +217,16 @@ impl InventoryCommands<'_, '_, '_> {
                 Ok(self.inv_id)
             }
             Some(FoundItem::InSubInventory(inv)) => {
+<<<<<<< Updated upstream
                 let Some(inventory) = self.all_inventories.get_mut(inv) else {
                     error!(
                         "Failed to get inventory {:?} while trying to remove item {:?}. This should not happen since we just found the item in this inventory. Skipping.",
                         inv, item
                     );
+=======
+                let Some(mut inventory) = self.all_inventories.get_mut(inv) else {
+                    error!("Failed to get inventory {:?} while trying to remove item {:?}. This should not happen since we just found the item in this inventory. Skipping.", inv, item);
+>>>>>>> Stashed changes
                     return Err(RemoveFailed::InventoryNotFound(inv));
                 };
                 inventory.remove(item).ok_or(RemoveFailed::FailedToRemove)?;
